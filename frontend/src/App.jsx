@@ -320,26 +320,17 @@ const VideoChat = ({ roomId, userName, onLeaveRoom }) => {
   useEffect(() => {
     console.log('Component mounted - Initializing connections');
 
-    // Connect to socket.io backend using the deployed Netlify URL
-    socketRef.current = io('https://vrroom.netlify.app/.netlify/functions/server', {
-      path: '/socket.io',
-      transports: ['websocket'],
-      secure: true
-    });
+    // Connect to socket.io backend
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://192.168.1.2:3001';
+    socketRef.current = io(socketUrl);
 
-    // Initialize peer with the deployed Netlify URL
+    // Initialize peer
     peerInstanceRef.current = new Peer(undefined, {
-      host: 'vrroom.netlify.app',
-      path: '/.netlify/functions/server/peerjs',
-      secure: true,
-      port: 443,
-      debug: 3,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:global.stun.twilio.com:3478' }
-        ]
-      }
+      host: import.meta.env.VITE_PEER_HOST || '192.168.1.2',
+      port: import.meta.env.VITE_PEER_PORT || '3001',
+      path: import.meta.env.VITE_PEER_PATH || '/peerjs',
+      secure: import.meta.env.VITE_PEER_SECURE === 'true',
+      debug: 3
     });
 
     // Get initial camera stream
@@ -357,7 +348,7 @@ const VideoChat = ({ roomId, userName, onLeaveRoom }) => {
         });
 
         // Answer incoming calls
-        peerInstanceRef.current.on('call', call => {
+      peerInstanceRef.current.on('call', call => {
           console.log('Incoming call from peer:', call.peer);
           
           if (connectedPeers.has(call.peer)) {
@@ -365,9 +356,9 @@ const VideoChat = ({ roomId, userName, onLeaveRoom }) => {
             return;
           }
 
-          call.answer(stream);
+        call.answer(stream);
           
-          call.on('stream', remoteStream => {
+        call.on('stream', remoteStream => {
             console.log('Received remote stream from:', call.peer);
             if (remoteStream.id === stream.id) {
               console.log('Warning: Received our own stream, ignoring');
