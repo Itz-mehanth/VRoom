@@ -321,15 +321,15 @@ const VideoChat = ({ roomId, userName, onLeaveRoom }) => {
     console.log('Component mounted - Initializing connections');
 
     // Connect to socket.io backend
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3001';
+    const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
     socketRef.current = io(socketUrl);
 
     // Initialize peer
     peerInstanceRef.current = new Peer(undefined, {
-      host: import.meta.env.VITE_PEER_HOST || 'localhost',
-      port: import.meta.env.VITE_PEER_PORT || '3001',
-      path: import.meta.env.VITE_PEER_PATH || '/peerjs',
-      secure: import.meta.env.VITE_PEER_SECURE === 'true',
+      host: process.env.REACT_APP_PEER_HOST || 'localhost',
+      port: process.env.REACT_APP_PEER_PORT || '3001',
+      path: process.env.REACT_APP_PEER_PATH || '/peerjs',
+      secure: process.env.REACT_APP_PEER_SECURE === 'true',
       debug: 3
     });
 
