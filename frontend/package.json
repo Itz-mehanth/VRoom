@@ -2,7 +2,6 @@
   "name": "vrroom",
   "version": "1.0.0",
   "private": true,
-  "type": "module",
   "homepage": "https://vrroom.netlify.app",
   "dependencies": {
     "react": "^18.2.0",
@@ -15,7 +14,7 @@
     "vite": "^5.0.12"
   },
   "scripts": {
-    "dev": "vite",
+    "start": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
