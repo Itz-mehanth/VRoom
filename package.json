@@ -1,0 +1,18 @@
+{
+  "name": "video-chat-app",
+  "version": "1.0.0",
+  "description": "Video chat application with WebRTC",
+  "scripts": {
+    "dev": "vite",
+    "build": "cd frontend && npm install && npm run build && cd ../functions && npm install",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "vite": "^4.3.9"
+  }
+} 
