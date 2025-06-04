@@ -320,17 +320,19 @@ const VideoChat = ({ roomId, userName, onLeaveRoom }) => {
   useEffect(() => {
     console.log('Component mounted - Initializing connections');
 
-    // Connect to socket.io backend using Netlify function URL
-    socketRef.current = io('/.netlify/functions/server', {
+    // Connect to socket.io backend using the deployed Netlify URL
+    socketRef.current = io('https://vrroom.netlify.app/.netlify/functions/server', {
       path: '/socket.io',
-      transports: ['websocket']
+      transports: ['websocket'],
+      secure: true
     });
 
-    // Initialize peer with Netlify function URL
+    // Initialize peer with the deployed Netlify URL
     peerInstanceRef.current = new Peer(undefined, {
-      host: window.location.hostname,
+      host: 'vrroom.netlify.app',
       path: '/.netlify/functions/server/peerjs',
-      secure: window.location.protocol === 'https:',
+      secure: true,
+      port: 443,
       debug: 3,
       config: {
         iceServers: [
