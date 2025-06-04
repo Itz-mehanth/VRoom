@@ -320,18 +320,35 @@ const VideoChat = ({ roomId, userName, onLeaveRoom }) => {
   useEffect(() => {
     console.log('Component mounted - Initializing connections');
 
-    // Connect to socket.io backend
-    const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3001';
-    socketRef.current = io(socketUrl);
 
-    // Initialize peer
-    peerInstanceRef.current = new Peer(undefined, {
-      host: process.env.REACT_APP_PEER_HOST || 'localhost',
-      port: process.env.REACT_APP_PEER_PORT || '3001',
-      path: process.env.REACT_APP_PEER_PATH || '/peerjs',
-      secure: process.env.REACT_APP_PEER_SECURE === 'true',
-      debug: 3
-    });
+    if(true){
+      // Connect to socket.io backend
+      const socketUrl = process.env.REACT_APP_SOCKET_URL || 'https://vrroom-backend.herokuapp.com';
+      socketRef.current = io(socketUrl);
+  
+      // Initialize peer
+      peerInstanceRef.current = new Peer(undefined, {
+        host: 'vrroom-backend.herokuapp.com',
+        port: '3001',
+        path:  '/peerjs',
+        secure: true,
+        debug: 3
+      });
+    }else{
+      // Connect to socket.io backend
+      const socketUrl = 'http://localhost:3001';
+      socketRef.current = io(socketUrl);
+  
+      // Initialize peer
+      peerInstanceRef.current = new Peer(undefined, {
+        host: 'localhost',
+        port: '3001',
+        path: '/peerjs',
+        secure: 'true',
+        debug: 3
+      });
+    }
+
 
     // Get initial camera stream
     getCameraStream()
