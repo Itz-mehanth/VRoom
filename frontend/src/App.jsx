@@ -323,13 +323,13 @@ const VideoChat = ({ roomId, userName, onLeaveRoom }) => {
 
     if(true){
       // Connect to socket.io backend
-      const socketUrl = process.env.REACT_APP_SOCKET_URL || 'https://vrroom-backend.herokuapp.com';
+      const socketUrl = 'https://vrroom-x6vw.onrender.com';
       socketRef.current = io(socketUrl);
   
       // Initialize peer
       peerInstanceRef.current = new Peer(undefined, {
-        host: 'vrroom-backend.herokuapp.com',
-        port: '3001',
+        host: 'vrroom-x6vw.onrender.com',
+        port: '443',
         path:  '/peerjs',
         secure: true,
         debug: 3
