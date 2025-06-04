@@ -23,6 +23,10 @@ const peerServer = ExpressPeerServer(server, {
 
 app.use('/peerjs', peerServer);
 
+app.get('/', (req, res) => {
+  res.send('VRoom WebRTC + Socket.io Backend is running 🚀');
+});
+
 io.on('connection', socket => {
   console.log('New socket connection:', socket.id);
 
