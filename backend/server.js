@@ -1,33 +1,62 @@
 const express = require('express');
-const http = require('http');
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
 const { ExpressPeerServer } = require('peer');
 const { v4: uuidV4 } = require('uuid');
 const socketIO = require('socket.io');
+const cors = require('cors');
 
 const app = express();
-const server = http.createServer(app);
+
+// Enable CORS
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST"],
+  credentials: true
+}));
+
+// Read SSL certificates
+const sslOptions = {
+  key: fs.readFileSync(path.join(__dirname, '../frontend/cert/key.pem')),
+  cert: fs.readFileSync(path.join(__dirname, '../frontend/cert/cert.pem'))
+};
+
+// Create HTTPS server
+const server = https.createServer(sslOptions, app);
 
 // Track users in rooms
 const rooms = new Map();
 
+// Create Peer server
+const peerServer = ExpressPeerServer(server, {
+  debug: true,
+  ssl: sslOptions,
+  proxied: true,
+  path: '/',
+  key: 'peerjs'
+});
+
+// Use PeerJS server
+app.use('/peerjs', peerServer);
+
 const io = socketIO(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"]
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
-
-const peerServer = ExpressPeerServer(server, {
-  debug: true
-});
-
-app.use('/peerjs', peerServer);
 
 io.on('connection', socket => {
   console.log('New socket connection:', socket.id);
 
   socket.on('join-room', (roomId, userId, userName) => {
+    console.log(`Socket ${socket.id} joining room ${roomId} as ${userName}`);
     socket.join(roomId);
+    // Store roomId in socket data
+    socket.data.roomId = roomId;
+    console.log(`Stored roomId ${roomId} in socket data`);
     
     // Initialize room if it doesn't exist
     if (!rooms.has(roomId)) {
@@ -39,14 +68,28 @@ io.on('connection', socket => {
     }
     
     // Add user to room
-    rooms.get(roomId).users.set(userId, {
+    const usersMap = rooms.get(roomId).users;
+    
+    // Remove any existing entries for this user (by userName or socketId)
+    for (const [existingId, existingUser] of usersMap.entries()) {
+      if (existingUser.name === userName || existingUser.socketId === socket.id) {
+        console.log(`Removing existing user entry - Name: ${existingUser.name}, ID: ${existingId}`);
+        usersMap.delete(existingId);
+      }
+    }
+
+    // Add user to room with proper initial position
+    usersMap.set(userId, {
       id: userId,
+      socketId: socket.id,  // Store the socket ID
       name: userName || `User ${userId.slice(0, 5)}`,
+      position: { x: 0, y: 2, z: 0 }, // Set y to 2 to match VRScene initial height
+      isWalking: false // Initialize isWalking state
     });
     
     // Log new user and current room state
     console.log(`User joined - Room: ${roomId}`);
-    console.log(`User details - ID: ${userId}, Name: ${userName}`);
+    console.log(`User details - ID: ${userId}, SocketID: ${socket.id}, Name: ${userName}`);
     console.log('Current users in room:', Array.from(rooms.get(roomId).users.values()));
     
     // Send chat history to new user
@@ -57,6 +100,7 @@ io.on('connection', socket => {
     io.to(roomId).emit('room-users', usersInRoom);
     
     // Notify others that user joined
+    console.log(`Notifying others that user joined - Room: ${roomId}`);
     socket.to(roomId).emit('user-connected', userId);
     
     // Send system message about user joining
@@ -94,39 +138,94 @@ io.on('connection', socket => {
     socket.on('disconnect', () => {
       // Remove user from room
       if (rooms.has(roomId)) {
-        const disconnectedUser = rooms.get(roomId).users.get(userId);
-        rooms.get(roomId).users.delete(userId);
+        // Find user by socket ID
+        let disconnectedUser = null;
+        let disconnectedUserId = null;
         
-        console.log(`User disconnected - Room: ${roomId}`);
-        console.log(`Disconnected user: ${disconnectedUser?.name} (${userId})`);
+        for (const [userId, user] of rooms.get(roomId).users.entries()) {
+          if (user.socketId === socket.id) {
+            disconnectedUser = user;
+            disconnectedUserId = userId;
+            break;
+          }
+        }
         
-        // Send system message about user leaving
-        const leaveMessage = {
-          id: uuidV4(),
-          type: 'system',
-          content: `${userName} left the room`,
-          timestamp: new Date().toISOString(),
-          userId: 'system'
-        };
-        rooms.get(roomId).messages.push(leaveMessage);
-        io.to(roomId).emit('chat-message', leaveMessage);
+        if (disconnectedUser) {
+          rooms.get(roomId).users.delete(disconnectedUserId);
+          
+          console.log(`User disconnected - Room: ${roomId}`);
+          console.log(`Disconnected user: ${disconnectedUser.name} (${disconnectedUserId})`);
+          
+          // Send system message about user leaving
+          const leaveMessage = {
+            id: uuidV4(),
+            type: 'system',
+            content: `${disconnectedUser.name} left the room`,
+            timestamp: new Date().toISOString(),
+            userId: 'system'
+          };
+          rooms.get(roomId).messages.push(leaveMessage);
+          io.to(roomId).emit('chat-message', leaveMessage);
+          
+          // If room is empty, delete it
+          if (rooms.get(roomId).users.size === 0) {
+            rooms.delete(roomId);
+            console.log(`Room ${roomId} deleted - no users remaining`);
+          } else {
+            // Update user list for remaining users
+            const updatedUsers = Array.from(rooms.get(roomId).users.values());
+            console.log('Remaining users in room:', updatedUsers);
+            io.to(roomId).emit('room-users', updatedUsers);
+          }
+        }
         
-        // If room is empty, delete it
-        if (rooms.get(roomId).users.size === 0) {
-          rooms.delete(roomId);
-          console.log(`Room ${roomId} deleted - no users remaining`);
-        } else {
-          // Update user list for remaining users
-          const updatedUsers = Array.from(rooms.get(roomId).users.values());
-          console.log('Remaining users in room:', updatedUsers);
-          io.to(roomId).emit('room-users', updatedUsers);
+        socket.to(roomId).emit('user-disconnected', disconnectedUserId);
+      }
+    });
+  });
+
+  // Handle position updates - moved outside join-room
+  socket.on('update-transform', (data) => {
+    console.log('Received position update:', data);
+    
+    // Use the stored roomId from socket data
+    const roomId = socket.data.roomId;
+    console.log('Room ID from socket data:', roomId);
+    
+    if (!roomId) {
+      console.log('No room ID found for this socket');
+      return;
+    }
+
+    if (rooms.has(roomId)) {
+      // Find the user in the room
+      const room = rooms.get(roomId);
+      const userEntry = Array.from(room.users.entries())
+        .find(([_, user]) => user.name === data.userName);
+      
+      if (userEntry) {
+        const [userId, user] = userEntry;
+        if (user) {
+          user.position = data.position;
+          user.rotation = data.rotation;
+          console.log(`User movement - Room: ${roomId}, User: ${user.name}`);
+          console.log(`New position - x: ${data.position.x.toFixed(2)}, y: ${data.position.y.toFixed(2)}, z: ${data.position.z.toFixed(2)}`);
+          console.log(`New rotation - x: ${data.rotation.x.toFixed(2)}, y: ${data.rotation.y.toFixed(2)}, z: ${data.rotation.z.toFixed(2)}`);
+          console.log(`Is walking: ${data.isWalking}`);
+          
+          // Broadcast the updated position to all users in the room
+          io.to(roomId).emit('user-transform', {
+            userName: data.userName,
+            position: data.position,
+            rotation: data.rotation,
+            isWalking: data.isWalking
+          });
         }
       }
-      socket.to(roomId).emit('user-disconnected', userId);
-    });
+    }
   });
 });
 
 server.listen(3001, () => {
-  console.log('Server running on http://localhost:3001');
+  console.log('Server running on https://localhost:3001');
 });

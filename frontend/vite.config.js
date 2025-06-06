@@ -1,18 +1,17 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import fs from 'fs'
+import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: '0.0.0.0',
-    port: 5173
+    https: {
+      key: fs.readFileSync(path.resolve(__dirname, 'cert/key.pem')),
+      cert: fs.readFileSync(path.resolve(__dirname, 'cert/cert.pem')),
+    },
+    port: 5173,
+    host: true, // This enables listening on all network interfaces
   },
-  define: {
-    'process.env.REACT_APP_SOCKET_URL': JSON.stringify(process.env.REACT_APP_SOCKET_URL),
-    'process.env.REACT_APP_PEER_HOST': JSON.stringify(process.env.REACT_APP_PEER_HOST),
-    'process.env.REACT_APP_PEER_PORT': JSON.stringify(process.env.REACT_APP_PEER_PORT),
-    'process.env.REACT_APP_PEER_PATH': JSON.stringify(process.env.REACT_APP_PEER_PATH),
-    'process.env.REACT_APP_PEER_SECURE': JSON.stringify(process.env.REACT_APP_PEER_SECURE)
-  }
 })
