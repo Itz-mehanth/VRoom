@@ -725,7 +725,7 @@ const ChatMessage = ({ message, currentUserId }) => {
       <div style={{ 
         position: 'absolute',
         top: 0,
-        left: 0,
+        left: 0,  
         width: '100%',
         height: '100%',
         pointerEvents: 'none'
@@ -747,7 +747,7 @@ const ChatMessage = ({ message, currentUserId }) => {
                 <button
                   onClick={toggleVideo}
                   style={{
-                    padding: '8px 16px',
+                    padding: '8px 8px',
                     backgroundColor: isVideoEnabled ? '#3c4043' : '#ea4335',
                     color: 'white',
                     border: 'none',
@@ -766,7 +766,7 @@ const ChatMessage = ({ message, currentUserId }) => {
                 <button
                   onClick={toggleAudio}
                   style={{
-                    padding: '8px 16px',
+                    padding: '8px 8px',
                     backgroundColor: isAudioEnabled ? '#3c4043' : '#ea4335',
                     color: 'white',
                     border: 'none',
@@ -785,7 +785,7 @@ const ChatMessage = ({ message, currentUserId }) => {
                 <button
                   onClick={isScreenSharing ? stopScreenShare : startScreenShare}
                   style={{
-                    padding: '8px 16px',
+                    padding: '8px 8px',
                     backgroundColor: isScreenSharing ? '#ea4335' : '#3c4043',
                     color: 'white',
                     border: 'none',
@@ -806,7 +806,7 @@ const ChatMessage = ({ message, currentUserId }) => {
             <button
               onClick={() => setIsParticipantsOpen(!isParticipantsOpen)}
               style={{
-                padding: '8px 16px',
+                padding: '8px 8px',
                 backgroundColor: isParticipantsOpen ? '#8ab4f8' : '#3c4043',
                 color: isParticipantsOpen ? '#202124' : 'white',
                 border: 'none',
@@ -819,7 +819,7 @@ const ChatMessage = ({ message, currentUserId }) => {
             <button
               onClick={() => setIsChatOpen(!isChatOpen)}
               style={{
-                padding: '8px 16px',
+                padding: '8px 8px',
                 backgroundColor: isChatOpen ? '#8ab4f8' : '#3c4043',
                 color: isChatOpen ? '#202124' : 'white',
                 border: 'none',
@@ -832,7 +832,7 @@ const ChatMessage = ({ message, currentUserId }) => {
             <button
               onClick={() => toggleView()}
               style={{
-                padding: '8px 16px',
+                padding: '8px 8px',
                 backgroundColor: '#3c4043',
                 color: 'white',
                 border: 'none',
@@ -845,7 +845,7 @@ const ChatMessage = ({ message, currentUserId }) => {
             <button
               onClick={onLeaveRoom}
               style={{
-                padding: '8px 16px',
+                padding: '8px 8px',
                 backgroundColor: '#ea4335',
                 color: 'white',
                 border: 'none',
@@ -862,7 +862,7 @@ const ChatMessage = ({ message, currentUserId }) => {
         <div style={{ 
           display: 'flex',
           position: 'relative',
-          height: 'calc(100% - 64px)',
+          height: 'calc(100%)',
           pointerEvents: 'none'
         }}>
           {/* Video Grid - Only visible in video mode, positioned on the right */}
