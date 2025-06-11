@@ -11,7 +11,7 @@ const app = express();
 
 // Enable CORS
 app.use(cors({
-  origin: ["*", "https://vrroom-x6vw.onrender.com"],
+  origin: ["*", "https://vrroom.netlify.app"],
   methods: ["GET", "POST"],
   credentials: true
 }));
@@ -225,6 +225,7 @@ io.on('connection', socket => {
     }
   });
 });
+
 
 server.listen(3001, '0.0.0.0', () => {
   console.log('Server running on port 3001');
