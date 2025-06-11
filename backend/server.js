@@ -11,7 +11,7 @@ const app = express();
 
 // Enable CORS
 app.use(cors({
-  origin: "*",
+  origin: ["*", "https://vrroom-x6vw.onrender.com"],
   methods: ["GET", "POST"],
   credentials: true
 }));
