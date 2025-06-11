@@ -11,7 +11,7 @@ const app = express();
 
 // Enable CORS
 app.use(cors({
-  origin: ["*", "https://vrroom.netlify.app"],
+  origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
   methods: ["GET", "POST"],
   credentials: true
 }));
