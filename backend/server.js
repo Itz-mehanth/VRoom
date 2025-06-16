@@ -1,7 +1,10 @@
 const express = require('express');
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
+
+// const https = require('https');
+// const fs = require('fs');
+// const path = require('path');
+const http = require('http');
+
 const { ExpressPeerServer } = require('peer');
 const { v4: uuidV4 } = require('uuid');
 const socketIO = require('socket.io');
@@ -18,14 +21,21 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+app.options('*', cors({
+  origin: "https://vrroom.netlify.app",
+  methods: ["GET", "POST"],
+  credentials: true
+}));
+
+
 // Read SSL certificates
-const sslOptions = {
-  key: fs.readFileSync(path.join(__dirname, 'cert/key.pem')),
-  cert: fs.readFileSync(path.join(__dirname, 'cert/cert.pem'))
-};
+// const sslOptions = {
+//   key: fs.readFileSync(path.join(__dirname, 'cert/key.pem')),
+//   cert: fs.readFileSync(path.join(__dirname, 'cert/cert.pem'))
+// };
 
 // Create HTTPS server
-const server = https.createServer(sslOptions, app);
+const server = http.createServer(app);
 
 // Track users in rooms
 const rooms = new Map();
@@ -33,7 +43,7 @@ const rooms = new Map();
 // Create Peer server
 const peerServer = ExpressPeerServer(server, {
   debug: true,
-  ssl: sslOptions,
+  // ssl: sslOptions,
   proxied: true,
   path: '/',
   key: 'peerjs',
