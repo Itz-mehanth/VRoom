@@ -32,6 +32,11 @@ app.use(cors({
 //   cert: fs.readFileSync(path.join(__dirname, 'cert/cert.pem'))
 // };
 
+// Add error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
 
 // Track users in rooms
 const rooms = new Map();
@@ -56,6 +61,7 @@ app.use('/peerjs', peerServer);
 
 // Configure Socket.IO with updated settings
 const io = socketIO(server, {
+  path: '/socket.io/',
   cors: {
     origin: ["https://vrroom.netlify.app", "https://vrroom-x6vw.onrender.com"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -73,6 +79,11 @@ const io = socketIO(server, {
   }
 });
 
+// Add connection error handling for Socket.IO
+io.engine.on("connection_error", (err) => {
+  console.log('Socket.IO connection error:', err);
+});
+
 // Add a basic health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
@@ -80,6 +91,15 @@ app.get('/health', (req, res) => {
 
 io.on('connection', socket => {
   console.log('New socket connection:', socket.id);
+
+  // Handle connection errors
+  socket.on('error', (error) => {
+    console.error('Socket error:', error);
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('Socket connection error:', error);
+  });
 
   socket.on('join-room', (roomId, userId, userName) => {
     console.log(`Socket ${socket.id} joining room ${roomId} as ${userName}`);
@@ -256,7 +276,6 @@ io.on('connection', socket => {
     }
   });
 });
-
 
 server.listen(3001, '0.0.0.0', () => {
   console.log('Server running on port 3001');
