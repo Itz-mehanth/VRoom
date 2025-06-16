@@ -17,21 +17,12 @@ const server = http.createServer(app);
 
 // Enable CORS
 app.use(cors({
-  // origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
   origin: "https://vrroom.netlify.app",
-  // methods: ["GET", "POST"],
-  credentials: true,
-  // allowedHeaders: ["Content-Type", "Authorization"]
+  credentials: true
 }));
 
-app.options('*', cors(
-  // {
-  // origin: "https://vrroom.netlify.app",
-  // methods: ["GET", "POST"],
-  // credentials: true
-  // }
-));
-
+// Remove the problematic wildcard options route
+// app.options('*', cors());
 
 // Read SSL certificates
 // const sslOptions = {
