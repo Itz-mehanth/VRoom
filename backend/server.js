@@ -1,10 +1,7 @@
 const express = require('express');
-
-// const https = require('https');
-// const fs = require('fs');
-// const path = require('path');
-const http = require('http');
-
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
 const { ExpressPeerServer } = require('peer');
 const { v4: uuidV4 } = require('uuid');
 const socketIO = require('socket.io');
@@ -12,94 +9,58 @@ const cors = require('cors');
 
 const app = express();
 
-// Create HTTP server
-const server = http.createServer(app);
-
-// Enable CORS with more specific configuration
+// Enable CORS
 app.use(cors({
-  origin: ["https://vrroom.netlify.app", "https://vrroom-x6vw.onrender.com"],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
+  // origin: "https://vrroom.netlify.app",
+  methods: ["GET", "POST"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Remove the problematic wildcard options route
-// app.options('*', cors());
-
 // Read SSL certificates
-// const sslOptions = {
-//   key: fs.readFileSync(path.join(__dirname, 'cert/key.pem')),
-//   cert: fs.readFileSync(path.join(__dirname, 'cert/cert.pem'))
-// };
+const sslOptions = {
+  key: fs.readFileSync(path.join(__dirname, 'cert/key.pem')),
+  cert: fs.readFileSync(path.join(__dirname, 'cert/cert.pem'))
+};
 
-// Add error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({ error: 'Internal Server Error' });
-});
+// Create HTTPS server
+const server = https.createServer(sslOptions, app);
 
 // Track users in rooms
 const rooms = new Map();
 
-// Create Peer server with updated CORS config
+// Create Peer server
 const peerServer = ExpressPeerServer(server, {
   debug: true,
-  // ssl: sslOptions,
+  ssl: sslOptions,
   proxied: true,
-  // path: '/',
-  // key: 'peerjs',
+  path: '/',
+  key: 'peerjs',
   corsOptions: {
-    origin: ["https://vrroom.netlify.app", "https://vrroom-x6vw.onrender.com"],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"]
+    origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
+    // origin: "https://vrroom.netlify.app",
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
 // Use PeerJS server
 app.use('/peerjs', peerServer);
 
-// Configure Socket.IO with updated settings
 const io = socketIO(server, {
-  path: '/socket.io/',
   cors: {
-    origin: ["https://vrroom.netlify.app", "https://vrroom-x6vw.onrender.com"],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
+    // origin: "https://vrroom.netlify.app",
+    methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"]
   },
-  transports: ['websocket', 'polling'],
-  allowEIO3: true,
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  upgradeTimeout: 30000,
-  allowUpgrades: true,
-  perMessageDeflate: {
-    threshold: 2048
-  }
-});
-
-// Add connection error handling for Socket.IO
-io.engine.on("connection_error", (err) => {
-  console.log('Socket.IO connection error:', err);
-});
-
-// Add a basic health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+  transports: ['websocket', 'polling']
 });
 
 io.on('connection', socket => {
   console.log('New socket connection:', socket.id);
-
-  // Handle connection errors
-  socket.on('error', (error) => {
-    console.error('Socket error:', error);
-  });
-
-  socket.on('connect_error', (error) => {
-    console.error('Socket connection error:', error);
-  });
 
   socket.on('join-room', (roomId, userId, userName) => {
     console.log(`Socket ${socket.id} joining room ${roomId} as ${userName}`);
@@ -277,7 +238,7 @@ io.on('connection', socket => {
   });
 });
 
+
 server.listen(3001, '0.0.0.0', () => {
   console.log('Server running on port 3001');
-  console.log('WebSocket server is ready');
 });
