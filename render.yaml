@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: vrroom-backend
+    env: node
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: FRONTEND_URL
+        value: https://vrroom.onrender.com
+
+  - type: web
+    name: vrroom-frontend
+    env: node
+    buildCommand: cd frontend && npm install && npm run build
+    startCommand: cd frontend && npm run preview
+    envVars:
+      - key: VITE_BACKEND_URL
+        value: https://vrroom-backend.onrender.com 

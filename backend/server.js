@@ -9,37 +9,43 @@ const cors = require('cors');
 
 const app = express();
 
+// Get environment variables
+const PORT = process.env.PORT || 3001;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://localhost:5173';
+const isProduction = process.env.NODE_ENV === 'production';
+
 // Enable CORS
 app.use(cors({
-  origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
-  // origin: "https://vrroom.netlify.app",
+  origin: [FRONTEND_URL, "https://localhost:5173"],
   methods: ["GET", "POST"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Read SSL certificates
-const sslOptions = {
-  key: fs.readFileSync(path.join(__dirname, 'cert/key.pem')),
-  cert: fs.readFileSync(path.join(__dirname, 'cert/cert.pem'))
-};
-
-// Create HTTPS server
-const server = https.createServer(sslOptions, app);
+// Create server based on environment
+let server;
+if (isProduction) {
+  server = require('http').createServer(app);
+} else {
+  // Read SSL certificates for development
+  const sslOptions = {
+    key: fs.readFileSync(path.join(__dirname, 'cert/key.pem')),
+    cert: fs.readFileSync(path.join(__dirname, 'cert/cert.pem'))
+  };
+  server = https.createServer(sslOptions, app);
+}
 
 // Track users in rooms
 const rooms = new Map();
 
 // Create Peer server
 const peerServer = ExpressPeerServer(server, {
-  debug: true,
-  ssl: sslOptions,
+  debug: !isProduction,
   proxied: true,
   path: '/',
   key: 'peerjs',
   corsOptions: {
-    origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
-    // origin: "https://vrroom.netlify.app",
+    origin: [FRONTEND_URL, "https://localhost:5173"],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -50,8 +56,7 @@ app.use('/peerjs', peerServer);
 
 const io = socketIO(server, {
   cors: {
-    origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
-    // origin: "https://vrroom.netlify.app",
+    origin: [FRONTEND_URL, "https://localhost:5173"],
     methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"]
@@ -239,6 +244,6 @@ io.on('connection', socket => {
 });
 
 
-server.listen(3001, '0.0.0.0', () => {
-  console.log('Server running on port 3001');
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT} in ${isProduction ? 'production' : 'development'} mode`);
 });
