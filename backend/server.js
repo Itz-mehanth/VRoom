@@ -22,6 +22,11 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
+// Add a basic health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // Create server based on environment
 let server;
 if (isProduction) {
@@ -243,7 +248,8 @@ io.on('connection', socket => {
   });
 });
 
-
-server.listen(PORT, '0.0.0.0', () => {
+// Start the server
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT} in ${isProduction ? 'production' : 'development'} mode`);
+  console.log(`Health check available at http://localhost:${PORT}/health`);
 });

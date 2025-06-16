@@ -8,9 +8,11 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 3001
+        value: 10000
       - key: FRONTEND_URL
-        value: https://vrroom.onrender.com
+        value: https://vrroom-frontend.onrender.com
+    healthCheckPath: /health
+    autoDeploy: true
 
   - type: web
     name: vrroom-frontend
@@ -19,4 +21,5 @@ services:
     startCommand: cd frontend && npm run preview
     envVars:
       - key: VITE_BACKEND_URL
-        value: https://vrroom-backend.onrender.com 
+        value: https://vrroom-backend.onrender.com
+    autoDeploy: true 
