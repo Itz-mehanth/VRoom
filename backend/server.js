@@ -15,10 +15,12 @@ const app = express();
 // Create HTTPS server
 const server = http.createServer(app);
 
-// Enable CORS
+// Enable CORS with more specific configuration
 app.use(cors({
-  origin: "https://vrroom.netlify.app",
-  credentials: true
+  origin: ["https://vrroom.netlify.app", "https://vrroom-x6vw.onrender.com"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 // Remove the problematic wildcard options route
@@ -34,7 +36,7 @@ app.use(cors({
 // Track users in rooms
 const rooms = new Map();
 
-// Create Peer server
+// Create Peer server with updated CORS config
 const peerServer = ExpressPeerServer(server, {
   debug: true,
   // ssl: sslOptions,
@@ -42,24 +44,25 @@ const peerServer = ExpressPeerServer(server, {
   // path: '/',
   // key: 'peerjs',
   corsOptions: {
-    // origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
-    origin: "https://vrroom.netlify.app",
-    // methods: ["GET", "POST"],
-    credentials: true
+    origin: ["https://vrroom.netlify.app", "https://vrroom-x6vw.onrender.com"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
   }
 });
 
 // Use PeerJS server
 app.use('/peerjs', peerServer);
 
+// Configure Socket.IO with updated CORS settings
 const io = socketIO(server, {
   cors: {
-    origin: "https://vrroom.netlify.app",
-    // methods: ["GET", "POST"],
+    origin: ["https://vrroom.netlify.app", "https://vrroom-x6vw.onrender.com"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
-    // allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization"]
   },
-  // transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling']
 });
 
 io.on('connection', socket => {
