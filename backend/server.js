@@ -11,9 +11,11 @@ const app = express();
 
 // Enable CORS
 app.use(cors({
-  origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
+  // origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
+  origin: "https://vrroom.netlify.app",
   methods: ["GET", "POST"],
-  credentials: true
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 // Read SSL certificates
@@ -34,7 +36,13 @@ const peerServer = ExpressPeerServer(server, {
   ssl: sslOptions,
   proxied: true,
   path: '/',
-  key: 'peerjs'
+  key: 'peerjs',
+  corsOptions: {
+    // origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
+    origin: "https://vrroom.netlify.app",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
 
 // Use PeerJS server
@@ -42,10 +50,12 @@ app.use('/peerjs', peerServer);
 
 const io = socketIO(server, {
   cors: {
-    origin: "*",
+    origin: "https://vrroom.netlify.app",
     methods: ["GET", "POST"],
-    credentials: true
-  }
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
+  },
+  transports: ['websocket', 'polling']
 });
 
 io.on('connection', socket => {
@@ -102,7 +112,8 @@ io.on('connection', socket => {
     // Notify others that user joined
     console.log(`Notifying others that user joined - Room: ${roomId}`);
     socket.to(roomId).emit('user-connected', userId);
-    
+    console.log(`Notified others that user joined - Room: ${roomId}`);
+
     // Send system message about user joining
     const joinMessage = {
       id: uuidV4(),

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, Suspense } from 'react';
+import React, { useState, useRef, useEffect, Suspense, createContext, useContext } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import ToggleButton from './ToggleButton';
 import { Environment, Sky, PerspectiveCamera, PointerLockControls, DragControls, OrbitControls, useGLTF, Stats } from '@react-three/drei';
@@ -13,6 +13,8 @@ import WalkingIndicator from './WalkingIndicator';
 import Minimap from './Minimap';
 import HeldItem from './HeldItem';
 import WaterPipe from './WaterPipe';
+import { useLoader } from '@react-three/fiber';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 const Rig = ({ userName, socket, position, setPosition, isWalking }) => {
   const rigRef = useRef();
@@ -160,6 +162,61 @@ const ModelPreview = ({ modelPath }) => {
       </Suspense>
     </Canvas>
   );
+};
+
+// Add ModelRegistry component at the top level
+const ModelRegistry = ({ children }) => {
+  const [models, setModels] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadModels = async () => {
+      const modelPaths = {
+        'plant1': '/models/plants/plant1.glb',
+        'plant2': '/models/plants/plant2.glb',
+        'plant3': '/models/plants/plant3.glb',
+        'fertilizer1': '/models/fertilizers/fertilizer1.glb',
+        'fertilizer2': '/models/fertilizers/fertilizer2.glb',
+        'waterJug': '/models/assets/waterJug1.glb',
+      };
+
+      const loader = new GLTFLoader();
+      const loadedModels = {};
+
+      try {
+        for (const [key, path] of Object.entries(modelPaths)) {
+          const gltf = await loader.loadAsync(path);
+          loadedModels[key] = gltf;
+        }
+        setModels(loadedModels);
+      } catch (error) {
+        console.error('Error loading models:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadModels();
+  }, []);
+
+  // Create a context to provide the models to children
+  return (
+    <ModelContext.Provider value={{ models, isLoading }}>
+      {children}
+    </ModelContext.Provider>
+  );
+};
+
+// Create a context for the model registry
+const ModelContext = createContext();
+
+// Create a hook to use the model registry
+const useModelRegistry = () => {
+  const context = useContext(ModelContext);
+  if (!context) {
+    throw new Error('useModelRegistry must be used within a ModelRegistry');
+  }
+  return context;
 };
 
 export default function VRScene ({ roomId, userName, users, toggleView, socket }) {
@@ -390,112 +447,114 @@ export default function VRScene ({ roomId, userName, users, toggleView, socket }
 
   return (
     <div style={{ width: '100%', height: '100%' }}>
-      <Canvas
-        ref={canvasRef}
-        shadows
-        gl={{
-          antialias: true,
-          alpha: true,
-          powerPreference: 'high-performance',
-          preserveDrawingBuffer: true,
-          failIfMajorPerformanceCaveat: true,
-          logarithmicDepthBuffer: true
-        }}
-        camera={{
-          fov: 75,
-          near: 0.1,
-          far: 1000,
-          position: [0, 2, 0]
-        }}
-        style={{ height: '100%' }}
-        onDoubleClick={handleCanvasClick}
-      >
-        <Stats />
-        <DragHandler />
-        <Environment preset="sunset" />
-        <ambientLight intensity={0.5} />
-        <directionalLight
-          castShadow
-          position={[50, 50, 25]}
-          intensity={1}
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-          shadow-camera-far={100}
-          shadow-camera-left={-50}
-          shadow-camera-right={50}
-          shadow-camera-top={50}
-          shadow-camera-bottom={-50}
-        />
-        <PerspectiveCamera makeDefault position={[0, 2, 5]} />
-        <fog attach="fog" args={['#000000', 1, 500]} />
-        <Sky sunPosition={[100, 20, 100]} turbidity={8} />
-        <gridHelper args={[100, 100]} position={[0, 0, 0]} />
-        <axesHelper args={[5]} />
-
-        <Rig
-          userName={userName}
-          socket={socket}
-          position={position}
-          setPosition={setPosition}
-          isWalking={isWalking}
-        />
-
-        <WaterPipe 
-          position={[15, 0, 15]} 
-          onRefill={handleRefillWater}
-        />
-
-        {/* Held Item */}
-        {heldItem && (
-          <HeldItem
-            item={heldItem}
-            onPlace={handlePlaceHeldItem}
-            waterCapacity={waterJugCapacity}
+      <ModelRegistry>
+        <Canvas
+          ref={canvasRef}
+          shadows
+          gl={{
+            antialias: true,
+            alpha: true,
+            powerPreference: 'high-performance',
+            preserveDrawingBuffer: true,
+            failIfMajorPerformanceCaveat: true,
+            logarithmicDepthBuffer: true
+          }}
+          camera={{
+            fov: 75,
+            near: 0.1,
+            far: 1000,
+            position: [0, 2, 0]
+          }}
+          style={{ height: '100%' }}
+          onDoubleClick={handleCanvasClick}
+        >
+          <Stats />
+          <DragHandler />
+          <Environment preset="sunset" />
+          <ambientLight intensity={0.5} />
+          <directionalLight
+            castShadow
+            position={[50, 50, 25]}
+            intensity={1}
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={100}
+            shadow-camera-left={-50}
+            shadow-camera-right={50}
+            shadow-camera-top={50}
+            shadow-camera-bottom={-50}
           />
-        )}
+          <PerspectiveCamera makeDefault position={[0, 2, 5]} />
+          <fog attach="fog" args={['#000000', 1, 500]} />
+          <Sky sunPosition={[100, 20, 100]} turbidity={8} />
+          <gridHelper args={[100, 100]} position={[0, 0, 0]} />
+          <axesHelper args={[5]} />
 
-        {users.map((user) => {
-          if (user.name === userName) {
-            return null;
-          }
-          return (
-            <Avatar
-              key={user.id}
-              position={user.position}
-              userName={user.name}
-              rotation={user.rotation}
-              isWalking={user.isWalking}
+          <Rig
+            userName={userName}
+            socket={socket}
+            position={position}
+            setPosition={setPosition}
+            isWalking={isWalking}
+          />
+
+          <WaterPipe 
+            position={[15, 0, 15]} 
+            onRefill={handleRefillWater}
+          />
+
+          {/* Held Item */}
+          {heldItem && (
+            <HeldItem
+              item={heldItem}
+              onPlace={handlePlaceHeldItem}
+              waterCapacity={waterJugCapacity}
             />
-          );
-        })}
+          )}
+
+          {users.map((user) => {
+            if (user.name === userName) {
+              return null;
+            }
+            return (
+              <Avatar
+                key={user.id}
+                position={user.position}
+                userName={user.name}
+                rotation={user.rotation}
+                isWalking={user.isWalking}
+              />
+            );
+          })}
     
-        <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[200, 200]} />
-          <meshStandardMaterial color="#ffffff" />
-        </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+            <planeGeometry args={[200, 200]} />
+            <meshStandardMaterial color="#ffffff" />
+          </mesh>
 
-        <Garden ref={gardenRef} scale={0.5} />
+          <Garden ref={gardenRef} scale={0.5} />
 
-        {/* Drop indicator */}
-        {dropIndicatorPosition && (
-          <DropIndicator position={dropIndicatorPosition} />
-        )}
+          {/* Drop indicator */}
+          {dropIndicatorPosition && (
+            <DropIndicator position={dropIndicatorPosition} />
+          )}
 
-        {/* Add placed models */}
-        {placedModels.map((model) => (
-          <DroppedModel
-            key={model.id}
-            modelPath={model.stages[0].modelPath || model.modelPath}
-            position={model.position}
-            name={model.name}
-            description={model.description}
-            onPositionChange={(newPosition) => handleModelPositionChange(model.id, newPosition)}
-            setSelectedModel={setSelectedModel}
-            setSelectedModelDetails={setSelectedModelDetails}
-            heldItem={heldItem}
-          />
-        ))}
-      </Canvas>
+          {/* Add placed models */}
+          {placedModels.map((model) => (
+            <DroppedModel
+              key={model.id}
+              modelPath={model.stages[0].modelPath || model.modelPath}
+              position={model.position}
+              name={model.name}
+              description={model.description}
+              onPositionChange={(newPosition) => handleModelPositionChange(model.id, newPosition)}
+              setSelectedModel={setSelectedModel}
+              setSelectedModelDetails={setSelectedModelDetails}
+              heldItem={heldItem}
+            />
+          ))}
+        </Canvas>
+      </ModelRegistry>
 
       <WalkingIndicator isWalking={isWalking} />
       
@@ -632,7 +691,7 @@ export default function VRScene ({ roomId, userName, users, toggleView, socket }
             <h2 style={{ marginBottom: '10px', fontSize: '24px' }}>
               {selectedModelDetails.name}
             </h2>
-            <p style={{ 
+            <p style={{
               fontSize: '16px', 
               lineHeight: '1.6',
               color: '#cccccc'

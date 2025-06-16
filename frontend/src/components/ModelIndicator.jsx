@@ -1,13 +1,19 @@
 import React from 'react';
+import LabelBillboard from './LabelBillboard';
 import { Billboard, Text } from '@react-three/drei';
-import * as THREE from 'three';
 
-const ModelIndicator = ({ position, isHovered, modelStats, heldItem }) => {
+const ModelIndicator = ({ position, name, isHovered, modelStats, heldItem }) => {
   // Don't show indicator if no item is held and model is hovered
   if (!heldItem && isHovered) return null;
 
   // Don't show if not hovered
-  if (!isHovered) return null;
+  if (!isHovered) return (
+    <Billboard position={position}>
+      <Text fontSize={0.2} color="white" anchorX="center" anchorY="middle">
+        {name}
+      </Text>
+    </Billboard>
+  );
 
   const getIndicatorText = () => {
     if (!heldItem) return '';
@@ -15,7 +21,7 @@ const ModelIndicator = ({ position, isHovered, modelStats, heldItem }) => {
     const stats = modelStats || { water: 0, fertilizer1: 0, fertilizer2: 0 };
     
     switch(heldItem.type) {
-      case 'waterJug':
+      case 'asset':
         return `Water: ${stats.water}L`;
       case 'fertilizer':
         if (heldItem.id === 'fertilizer1') {
@@ -29,32 +35,27 @@ const ModelIndicator = ({ position, isHovered, modelStats, heldItem }) => {
   };
 
   const getIndicatorColor = () => {
-    if (!heldItem) return 'black';
+    if (!heldItem) return '#2C3E50';
 
     switch(heldItem.type) {
-      case 'waterJug':
-        return '#black';
+      case 'asset':
+        return '#2980B9'; // Professional blue
       case 'fertilizer':
-        return 'black';
+        return '#27AE60'; // Professional green
       default:
-        return 'black';
+        return '#2C3E50'; // Professional dark blue
     }
   };
 
   return (
-    <Billboard
-      position={[position[0], position[1] + 0.5, position[2]]}
-      follow={true}
-    >
-      <Text
-        fontSize={0.5}
-        color={getIndicatorColor()}
-        anchorX="center"
-        anchorY="middle"
-      >
-        {getIndicatorText()}
-      </Text>
-    </Billboard>
+    <LabelBillboard
+      position={position}
+      name={name}
+      text={getIndicatorText()}
+      color={getIndicatorColor()}
+      maxDistance={30}
+      minOpacity={0.4}
+    />
   );
 };
 

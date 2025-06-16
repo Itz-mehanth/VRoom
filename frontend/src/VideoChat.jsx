@@ -434,10 +434,15 @@ const ChatMessage = ({ message, currentUserId }) => {
       // Initialize animation state tracking
       animationStateRef.current = new Map();
   
-      if(true){
+      if(false){
         // Connect to socket.io backend
         const socketUrl = 'https://vrroom-x6vw.onrender.com';
-        socketRef.current = io(socketUrl);
+        socketRef.current = io(socketUrl, {
+          withCredentials: true,
+          transports: ['websocket', 'polling'],
+          secure: true,
+          rejectUnauthorized: false
+        });
     
         // Initialize peer
         peerInstanceRef.current = new Peer(undefined, {
@@ -464,16 +469,39 @@ const ChatMessage = ({ message, currentUserId }) => {
           debug: 3
         });
       }
+
+      peerInstanceRef.current.on('open', id => {
+        console.log('My peer ID:', id);
+        setMyPeerId(id);
+        socketRef.current.emit('join-room', roomId, id, userName);
+      });
   
+
       // Pass socket instance up to parent component
       setSocket(socketRef.current);
   
       // Handle socket connection
       socketRef.current.on('connect', () => {
         console.log('Socket connected, joining room:', roomId);
-        socketRef.current.emit('join-room', roomId, socketRef.current.id, userName);
+        // socketRef.current.emit('join-room', roomId, socketRef.current.id, userName);
       });
-  
+
+       // Handle user disconnections
+       socketRef.current.on('user-disconnected', userId => {
+        console.log('User disconnected:', userId);
+        setPeerStreams(prev => {
+          const newStreams = new Map(prev);
+          newStreams.delete(userId);
+          return newStreams;
+        });
+
+        setConnectedPeers(prev => {
+          const newPeers = new Set(prev);
+          newPeers.delete(userId);
+          return newPeers;
+        });
+      });
+
       // Get initial camera stream
       getCameraStream()
         .then(stream => {
@@ -543,21 +571,6 @@ const ChatMessage = ({ message, currentUserId }) => {
           });
         });
 
-        // Update users state while preserving existing user data
-        // setUsers(prevUsers => {
-        //   const updatedUsers = roomUsers.map(newUser => {
-        //     const existingUser = prevUsers.find(u => u.id === newUser.id);
-        //     if (existingUser) {
-        //       return {
-        //         ...existingUser,
-        //         ...newUser
-        //       };
-        //     }
-        //     return newUser;
-        //   });
-        //   console.log('Updated users list:', updatedUsers);
-        //   return updatedUsers;
-        // });
 
         setUsers(roomUsers);
 
@@ -568,6 +581,7 @@ const ChatMessage = ({ message, currentUserId }) => {
             user.id !== myPeerId && !currentPeers.has(user.id)
           );
           
+          
           newPeers.forEach(user => {
             console.log('Connecting to new peer:', user.id);
             connectToNewUser(user.id, localStream);
@@ -575,26 +589,7 @@ const ChatMessage = ({ message, currentUserId }) => {
         }
       });
   
-      // Handle user disconnections
-      socketRef.current.on('user-disconnected', userId => {
-        console.log('User disconnected:', userId);
-        setPeerStreams(prev => {
-          const newStreams = new Map(prev);
-          newStreams.delete(userId);
-          return newStreams;
-        });
-        setConnectedPeers(prev => {
-          const newPeers = new Set(prev);
-          newPeers.delete(userId);
-          return newPeers;
-        });
-      });
   
-      peerInstanceRef.current.on('open', id => {
-        console.log('My peer ID:', id);
-        setMyPeerId(id);
-        socketRef.current.emit('join-room', roomId, id, userName);
-      });
   
       // Listen for chat messages
       socketRef.current.on('chat-message', (message) => {

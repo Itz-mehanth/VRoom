@@ -1,7 +1,6 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useRef, useEffect, useState } from 'react';
 import { collection, getDocs, doc, getDoc, collectionGroup } from 'firebase/firestore';
 import { db } from '../Firebase';
-import { useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useLoader } from '@react-three/fiber';
@@ -10,7 +9,24 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // Separate component for the 3D model preview
 const ModelPreview = ({ modelPath }) => {
   const gltf = useLoader(GLTFLoader, modelPath);
-  return <primitive object={gltf.scene} />;
+  const modelRef = useRef();
+  const [modelClone, setModelClone] = useState(null);
+
+  // Create a clone of the model when it's loaded
+  useEffect(() => {
+    if (gltf) {
+      const clone = gltf.scene.clone();
+      setModelClone(clone);
+    }
+  }, [gltf]);
+
+  if (!modelClone) return null;
+
+  return (
+    <mesh ref={modelRef} rotation={[0, 0, 0]} scale={[1, 1, 1]}>
+      <primitive object={modelClone} />
+    </mesh>
+  );
 };
 
 async function loadPlants() {
@@ -191,6 +207,7 @@ const ModelList = ({
   }, []);
 
   const [assets, setassets] = useState([]);
+  
   useEffect(() => {
     loadAssets().then(setassets);
     console.log(assets);
@@ -347,10 +364,18 @@ const ModelList = ({
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <Canvas camera={{ position: [0, 0, 2] }}>
-                  <OrbitControls autoRotate autoRotateSpeed={15}/>
+                <Canvas 
+                  camera={{ position: [0, 0, 2], fov: 50 }}
+                  style={{ background: 'transparent' }}
+                >
+                  <OrbitControls 
+                    autoRotate 
+                    autoRotateSpeed={15}
+                    enableZoom={false}
+                    enablePan={false}
+                  />
                   <ambientLight intensity={0.5} />
-                  <pointLight position={[10, 10, 10]} />
+                  <pointLight position={[10, 10, 10]} intensity={1} />
                   <Suspense fallback={null}>
                     <ModelPreview modelPath={plant.stages[0].modelPath} />
                   </Suspense>
@@ -380,10 +405,18 @@ const ModelList = ({
                   handleItemClick(fertilizer, 'fertilizer');
                 }}
               >
-                <Canvas camera={{ position: [0, 0, 0.5] }}>
-                  <OrbitControls autoRotate autoRotateSpeed={15}/>
+                <Canvas 
+                  camera={{ position: [0, 0, 2], fov: 50 }}
+                  style={{ background: 'transparent' }}
+                >
+                  <OrbitControls 
+                    autoRotate 
+                    autoRotateSpeed={15}
+                    enableZoom={false}
+                    enablePan={false}
+                  />
                   <ambientLight intensity={0.5} />
-                  <pointLight position={[10, 10, 10]} />
+                  <pointLight position={[10, 10, 10]} intensity={1} />
                   <Suspense fallback={null}>
                     <ModelPreview modelPath={fertilizer.modelPath} />
                   </Suspense>
@@ -413,10 +446,18 @@ const ModelList = ({
                   handleItemClick(asset, 'asset');
                 }}
               >
-                <Canvas camera={{ position: [0, 0, 0.5] }}>
-                  <OrbitControls autoRotate autoRotateSpeed={15}/>
+                <Canvas 
+                  camera={{ position: [0, 0, 2], fov: 50 }}
+                  style={{ background: 'transparent' }}
+                >
+                  <OrbitControls 
+                    autoRotate 
+                    autoRotateSpeed={15}
+                    enableZoom={false}
+                    enablePan={false}
+                  />
                   <ambientLight intensity={0.5} />
-                  <pointLight position={[10, 10, 10]} />
+                  <pointLight position={[10, 10, 10]} intensity={1} />
                   <Suspense fallback={null}>
                     <ModelPreview modelPath={asset.modelPath} />
                   </Suspense>

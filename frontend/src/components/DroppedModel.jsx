@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useGLTF, PresentationControls, DragControls, Billboard, Text, OrbitControls } from '@react-three/drei';
 import { useThree, useLoader } from '@react-three/fiber';
 import { useFrame } from '@react-three/fiber';
@@ -15,6 +15,7 @@ const DroppedModel = ({ modelPath, position, onClick, name, description, setSele
   const { camera } = useThree();
   const [isDragging, setIsDragging] = useState(false);
   const [modelHeight, setModelHeight] = useState(0);
+  const [modelWidth, setModelWidth] = useState(0);
   const originalMaterial = useRef();
   const [isHovered, setIsHovered] = useState(false);
   const [modelStats, setModelStats] = useState({
@@ -22,21 +23,27 @@ const DroppedModel = ({ modelPath, position, onClick, name, description, setSele
     fertilizer1: 0,
   });
 
-  const gltf = useLoader(GLTFLoader, modelPath, (loader) => {
-    console.log("GLTFLoader loaded: ", loader);
-  }, (error) => {
-    console.error("Error loading GLTF: ", error);
-  });
+  // Load the model
+  const gltf = useLoader(GLTFLoader, modelPath);
+
+  // Create a clone of the model when it's loaded
+  const modelClone = useMemo(() => {
+    if (gltf) {
+      return gltf.scene.clone();
+    }
+    return null;
+  }, [gltf]);
 
   // Calculate model height on load
   useEffect(() => {
-    console.log("modelPath received: ", modelPath);
-    if (gltf) {
-      const box = new THREE.Box3().setFromObject(gltf.scene);
+    if (modelClone) {
+      const box = new THREE.Box3().setFromObject(modelClone);
       const height = box.max.y - box.min.y;
+      const width = box.max.x - box.min.x;
       setModelHeight(height);
+      setModelWidth(width);
     }
-  }, [gltf]);
+  }, [modelClone]);
 
   // Set initial material reference
   useFrame(() => {
@@ -92,7 +99,7 @@ const DroppedModel = ({ modelPath, position, onClick, name, description, setSele
     }
   });
 
-  if (!gltf) return null;
+  if (!modelClone) return null;
 
   return (
     <>
@@ -143,20 +150,24 @@ const DroppedModel = ({ modelPath, position, onClick, name, description, setSele
             setIsHovered(false);
           }}
         >
-          <primitive ref={modelRef} object={gltf.scene} />
-          <Billboard position={[0, modelHeight + 0.5, 0]}>
-            <Text fontSize={0.5} color="white" anchorX="center" anchorY="middle">
-              {name}
-            </Text>
-          </Billboard>
-          <ModelIndicator 
-            position={adjustedPosition}
-            isHovered={isHovered}
-            modelStats={modelStats}
-            heldItem={heldItem}
-          />
+          <mesh ref={modelRef}>
+            <primitive object={modelClone} />
+          </mesh>
         </group>
       </DragControls>
+      
+      {/* ModelIndicator outside the DragControls */}
+      <ModelIndicator 
+        position={[
+          adjustedPosition[0],
+          adjustedPosition[1] + modelHeight, // Increased height to separate from name label
+          adjustedPosition[2]
+        ]}
+        name={name}
+        isHovered={isHovered}
+        modelStats={modelStats}
+        heldItem={heldItem}
+      />
     </>
   );
 };

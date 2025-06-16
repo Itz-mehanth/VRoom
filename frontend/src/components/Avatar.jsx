@@ -90,7 +90,7 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
         lockX={false}
         lockY={false}
         lockZ={false}
-        position={[0, 1, 0]}
+        position={[0, 0.5, 0]}
       >
         <Text
           fontSize={0.2}
