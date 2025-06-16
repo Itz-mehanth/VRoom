@@ -12,20 +12,25 @@ const cors = require('cors');
 
 const app = express();
 
+// Create HTTPS server
+const server = http.createServer(app);
+
 // Enable CORS
 app.use(cors({
   // origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
   origin: "https://vrroom.netlify.app",
-  methods: ["GET", "POST"],
+  // methods: ["GET", "POST"],
   credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"]
+  // allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-app.options('*', cors({
-  origin: "https://vrroom.netlify.app",
-  methods: ["GET", "POST"],
-  credentials: true
-}));
+app.options('*', cors(
+  // {
+  // origin: "https://vrroom.netlify.app",
+  // methods: ["GET", "POST"],
+  // credentials: true
+  // }
+));
 
 
 // Read SSL certificates
@@ -34,8 +39,6 @@ app.options('*', cors({
 //   cert: fs.readFileSync(path.join(__dirname, 'cert/cert.pem'))
 // };
 
-// Create HTTPS server
-const server = http.createServer(app);
 
 // Track users in rooms
 const rooms = new Map();
@@ -50,7 +53,7 @@ const peerServer = ExpressPeerServer(server, {
   corsOptions: {
     // origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
     origin: "https://vrroom.netlify.app",
-    methods: ["GET", "POST"],
+    // methods: ["GET", "POST"],
     credentials: true
   }
 });
@@ -61,11 +64,11 @@ app.use('/peerjs', peerServer);
 const io = socketIO(server, {
   cors: {
     origin: "https://vrroom.netlify.app",
-    methods: ["GET", "POST"],
+    // methods: ["GET", "POST"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"]
+    // allowedHeaders: ["Content-Type", "Authorization"]
   },
-  transports: ['websocket', 'polling']
+  // transports: ['websocket', 'polling']
 });
 
 io.on('connection', socket => {
