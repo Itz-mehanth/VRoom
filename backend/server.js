@@ -46,7 +46,7 @@ const peerServer = ExpressPeerServer(server, {
   // ssl: sslOptions,
   proxied: true,
   // path: '/',
-  key: 'peerjs',
+  // key: 'peerjs',
   corsOptions: {
     // origin: ["https://vrroom.netlify.app", "https://localhost:5173"],
     origin: "https://vrroom.netlify.app",
