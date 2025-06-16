@@ -12,7 +12,7 @@ const cors = require('cors');
 
 const app = express();
 
-// Create HTTPS server
+// Create HTTP server
 const server = http.createServer(app);
 
 // Enable CORS with more specific configuration
@@ -54,7 +54,7 @@ const peerServer = ExpressPeerServer(server, {
 // Use PeerJS server
 app.use('/peerjs', peerServer);
 
-// Configure Socket.IO with updated CORS settings
+// Configure Socket.IO with updated settings
 const io = socketIO(server, {
   cors: {
     origin: ["https://vrroom.netlify.app", "https://vrroom-x6vw.onrender.com"],
@@ -62,7 +62,20 @@ const io = socketIO(server, {
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"]
   },
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  upgradeTimeout: 30000,
+  allowUpgrades: true,
+  perMessageDeflate: {
+    threshold: 2048
+  }
+});
+
+// Add a basic health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
 });
 
 io.on('connection', socket => {
@@ -247,4 +260,5 @@ io.on('connection', socket => {
 
 server.listen(3001, '0.0.0.0', () => {
   console.log('Server running on port 3001');
+  console.log('WebSocket server is ready');
 });
