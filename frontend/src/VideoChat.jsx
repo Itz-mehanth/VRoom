@@ -442,7 +442,53 @@ const ChatMessage = ({ message, currentUserId }) => {
           withCredentials: true,
           transports: ['websocket', 'polling'],
           secure: true,
-          rejectUnauthorized: false
+          rejectUnauthorized: false,
+          reconnection: true,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          timeout: 10000,
+          autoConnect: true,
+          forceNew: true
+        });
+    
+        // Add detailed error handling
+        socketRef.current.on('connect_error', (error) => {
+          console.error('Socket connection error:', error);
+          console.error('Error details:', {
+            message: error.message,
+            description: error.description,
+            type: error.type,
+            context: error.context
+          });
+          
+          // Try to reconnect with polling if websocket fails
+          if (error.message.includes('websocket')) {
+            console.log('WebSocket failed, attempting to connect with polling...');
+            socketRef.current.io.opts.transports = ['polling', 'websocket'];
+          }
+        });
+
+        socketRef.current.on('connect', () => {
+          console.log('Socket connected successfully');
+          console.log('Transport:', socketRef.current.io.engine.transport.name);
+        });
+
+        socketRef.current.on('disconnect', (reason) => {
+          console.log('Socket disconnected:', reason);
+          if (reason === 'io server disconnect') {
+            // Server initiated disconnect, try to reconnect
+            socketRef.current.connect();
+          }
+        });
+
+        socketRef.current.on('reconnect_attempt', (attemptNumber) => {
+          console.log('Reconnection attempt:', attemptNumber);
+        });
+
+        socketRef.current.on('reconnect_failed', () => {
+          console.error('Failed to reconnect to server');
+          // Notify user about connection issues
+          alert('Unable to connect to server. Please check your internet connection and try again.');
         });
     
         // Initialize peer
@@ -471,24 +517,37 @@ const ChatMessage = ({ message, currentUserId }) => {
         });
       }
 
+      // Handle socket connection
+      socketRef.current.on('connect', () => {
+        console.log('Socket connected, waiting for peer ID...');
+      });
+
+      socketRef.current.on('connect_error', (error) => {
+        console.error('Socket connection error:', error);
+      });
+
       peerInstanceRef.current.on('open', id => {
         console.log('My peer ID:', id);
         setMyPeerId(id);
-        socketRef.current.emit('join-room', roomId, id, userName);
+        
+        // Only emit join-room if socket is connected
+        if (socketRef.current.connected) {
+          console.log('Socket connected, emitting join-room');
+          socketRef.current.emit('join-room', roomId, id, userName);
+        } else {
+          console.log('Socket not connected, waiting for connection...');
+          socketRef.current.once('connect', () => {
+            console.log('Socket connected, now emitting join-room');
+            socketRef.current.emit('join-room', roomId, id, userName);
+          });
+        }
       });
-  
 
       // Pass socket instance up to parent component
       setSocket(socketRef.current);
   
-      // Handle socket connection
-      socketRef.current.on('connect', () => {
-        console.log('Socket connected, joining room:', roomId);
-        // socketRef.current.emit('join-room', roomId, socketRef.current.id, userName);
-      });
-
-       // Handle user disconnections
-       socketRef.current.on('user-disconnected', userId => {
+      // Handle user disconnections
+      socketRef.current.on('user-disconnected', userId => {
         console.log('User disconnected:', userId);
         setPeerStreams(prev => {
           const newStreams = new Map(prev);
