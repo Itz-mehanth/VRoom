@@ -13,14 +13,23 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://localhost:5173';
 const isProduction = process.env.NODE_ENV === 'production';
+const WEBSOCKET_TIMEOUT = parseInt(process.env.WEBSOCKET_TIMEOUT) || 3000;
+const WEBSOCKET_PING_INTERVAL = parseInt(process.env.WEBSOCKET_PING_INTERVAL) || 3000;
 
 // Enable CORS
 app.use(cors({
   origin: [FRONTEND_URL, "https://localhost:5173", "https://vrroom.netlify.app"],
   methods: ["GET", "POST"],
   credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization", "Upgrade", "Connection"]
 }));
+
+// Add headers middleware
+app.use((req, res, next) => {
+  res.setHeader('Upgrade', 'websocket');
+  res.setHeader('Connection', 'Upgrade');
+  next();
+});
 
 // Create server based on environment
 let server;
@@ -59,10 +68,19 @@ const io = socketIO(server, {
     origin: [FRONTEND_URL, "https://localhost:5173", "https://vrroom.netlify.app"],
     methods: ["GET", "POST"],
     credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "Upgrade", "Connection"]
   },
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  pingTimeout: WEBSOCKET_TIMEOUT,
+  pingInterval: WEBSOCKET_PING_INTERVAL,
+  upgradeTimeout: WEBSOCKET_TIMEOUT,
+  allowUpgrades: true,
+  perMessageDeflate: false
 });
+
+// Add proxy configuration
+app.enable('trust proxy');
+app.set('trust proxy', 1);
 
 io.on('connection', socket => {
   console.log('New socket connection:', socket.id);
