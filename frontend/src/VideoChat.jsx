@@ -240,8 +240,9 @@ const ChatMessage = ({ message, currentUserId }) => {
     const [screenStream, setScreenStream] = useState(null);
     const previousStreamRef = useRef(null);
     const chatContainerRef = useRef(null);
-    const transformDataRef = useRef(new Map()); // Store transform data separately
-    const animationStateRef = useRef(new Map()); // Track animation state for each user
+    const transformDataRef = useRef(new Map());
+    const animationStateRef = useRef(new Map());
+    const [notification, setNotification] = useState('');
   
     // Function to handle transform updates with animation state check
     const handleTransformUpdate = (userName, transformData) => {
@@ -550,6 +551,11 @@ const ChatMessage = ({ message, currentUserId }) => {
           console.log('Listening for user-connected events');
           socketRef.current.on('user-connected', userId => {
             console.log('New user connected:', userId);
+            const newUser = users.find(user => user.id === userId);
+            if (newUser) {
+              setNotification(`${newUser.name} joined`);
+              setTimeout(() => setNotification(''), 3000);
+            }
             connectToNewUser(userId, stream);
           });
         })
@@ -716,278 +722,297 @@ const ChatMessage = ({ message, currentUserId }) => {
       }
     };
   
-    return (
-      <div style={{ 
-        position: 'absolute',
-        top: 0,
-        left: 0,  
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none'
-      }}>
-        {/* Header - Always visible */}
-        <div style={{ 
-          padding: '12px 24px',
-          backgroundColor: 'rgba(32, 33, 36, 0.9)',
-          borderBottom: '1px solid #3c4043',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          pointerEvents: 'auto'
-        }}>
-          <div style={{ fontSize: '1.25rem', color: 'white' }}>Room: {roomId}</div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            {currentView === 'video' && (
-              <>
-                <button
-                  onClick={toggleVideo}
-                  style={{
-                    padding: '8px 8px',
-                    backgroundColor: isVideoEnabled ? '#3c4043' : '#ea4335',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <span style={{ fontSize: '1.2em', lineHeight: 1 }}>
-                    {isVideoEnabled ? '📹' : '🚫'}
-                  </span>
-                  {isVideoEnabled ? 'Video On' : 'Video Off'}
-                </button>
-                <button
-                  onClick={toggleAudio}
-                  style={{
-                    padding: '8px 8px',
-                    backgroundColor: isAudioEnabled ? '#3c4043' : '#ea4335',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <span style={{ fontSize: '1.2em', lineHeight: 1 }}>
-                    {isAudioEnabled ? '🎤' : '🔇'}
-                  </span>
-                  {isAudioEnabled ? 'Audio On' : 'Audio Off'}
-                </button>
-                <button
-                  onClick={isScreenSharing ? stopScreenShare : startScreenShare}
-                  style={{
-                    padding: '8px 8px',
-                    backgroundColor: isScreenSharing ? '#ea4335' : '#3c4043',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <span style={{ fontSize: '1.2em', lineHeight: 1 }}>
-                    {isScreenSharing ? '🔴' : '💻'}
-                  </span>
-                  {isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
-                </button>
-              </>
-            )}
-            <button
-              onClick={() => setIsParticipantsOpen(!isParticipantsOpen)}
-              style={{
-                padding: '8px 8px',
-                backgroundColor: isParticipantsOpen ? '#8ab4f8' : '#3c4043',
-                color: isParticipantsOpen ? '#202124' : 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              People ({Array.from(connectedPeers).length + 1})
-            </button>
-            <button
-              onClick={() => setIsChatOpen(!isChatOpen)}
-              style={{
-                padding: '8px 8px',
-                backgroundColor: isChatOpen ? '#8ab4f8' : '#3c4043',
-                color: isChatOpen ? '#202124' : 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Chat
-            </button>
-            <button
-              onClick={() => toggleView()}
-              style={{
-                padding: '8px 8px',
-                backgroundColor: '#3c4043',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              {currentView === 'vr' ? 'Enter Video Chat' : 'Enter VR'}
-            </button>
-            <button
-              onClick={onLeaveRoom}
-              style={{
-                padding: '8px 8px',
-                backgroundColor: '#ea4335',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Leave
-            </button>
-          </div>
-        </div>
+    useEffect(() => {
+      if (socketRef.current) {
+        socketRef.current.on('user-connected', (userId) => {
+          const newUser = users.find(user => user.id === userId);
+          if (newUser) {
+            setNotification(`${newUser.name} joined`);
+            setTimeout(() => setNotification(''), 3000);
+          }
+        });
+      }
+    }, [users]);
   
-        {/* Main Content */}
+    return (
+      <div className="relative">
+        {notification && (
+          <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded shadow-lg z-50">
+            {notification}
+          </div>
+        )}
         <div style={{ 
-          display: 'flex',
-          position: 'relative',
-          height: 'calc(100%)',
+          position: 'absolute',
+          top: 0,
+          left: 0,  
+          width: '100%',
+          height: '100%',
           pointerEvents: 'none'
         }}>
-          {/* Video Grid - Only visible in video mode, positioned on the right */}
-          {currentView === 'video' && (
-            <VideoGrid
-              localStream={localStream}
-              peerStreams={peerStreams}
-              userName={userName}
-              isVideoEnabled={isVideoEnabled}
-              isAudioEnabled={isAudioEnabled}
-              users={users}
-              focusedVideo={focusedVideo}
-              setFocusedVideo={setFocusedVideo}
-            />
-          )}
-  
-          {/* Sidebars - Always visible if open */}
+          {/* Header - Always visible */}
           <div style={{ 
+            padding: '12px 24px',
+            backgroundColor: 'rgba(32, 33, 36, 0.9)',
+            borderBottom: '1px solid #3c4043',
             display: 'flex',
-            position: 'absolute',
-            right: 0,
-            height: '100%',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             pointerEvents: 'auto'
           }}>
-            {isParticipantsOpen && (
-              <div style={{
-                width: '320px',
-                borderLeft: '1px solid #3c4043',
-                backgroundColor: 'rgba(32, 33, 36, 0.95)',
-                display: 'flex',
-                flexDirection: 'column'
-              }}>
-                <div style={{ padding: '16px', borderBottom: '1px solid #3c4043' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.125rem', color: 'white' }}>People</h3>
-                </div>
-                <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
-                  {users.map(user => (
-                    <div 
-                      key={user.id}
-                      style={{
-                        padding: '12px',
-                        marginBottom: '8px',
-                        backgroundColor: '#303134',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        color: 'white'
-                      }}
-                    >
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        backgroundColor: '#8ab4f8',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#202124',
-                        fontWeight: '500'
-                      }}>
-                        {user.name[0].toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: user.id === myPeerId ? '500' : 'normal' }}>
-                          {user.name} {user.id === myPeerId && '(You)'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <div style={{ fontSize: '1.25rem', color: 'white' }}>Room: {roomId}</div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              {currentView === 'video' && (
+                <>
+                  <button
+                    onClick={toggleVideo}
+                    style={{
+                      padding: '8px 8px',
+                      backgroundColor: isVideoEnabled ? '#3c4043' : '#ea4335',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span style={{ fontSize: '1.2em', lineHeight: 1 }}>
+                      {isVideoEnabled ? '📹' : '🚫'}
+                    </span>
+                    {isVideoEnabled ? 'Video On' : 'Video Off'}
+                  </button>
+                  <button
+                    onClick={toggleAudio}
+                    style={{
+                      padding: '8px 8px',
+                      backgroundColor: isAudioEnabled ? '#3c4043' : '#ea4335',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span style={{ fontSize: '1.2em', lineHeight: 1 }}>
+                      {isAudioEnabled ? '🎤' : '🔇'}
+                    </span>
+                    {isAudioEnabled ? 'Audio On' : 'Audio Off'}
+                  </button>
+                  <button
+                    onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+                    style={{
+                      padding: '8px 8px',
+                      backgroundColor: isScreenSharing ? '#ea4335' : '#3c4043',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span style={{ fontSize: '1.2em', lineHeight: 1 }}>
+                      {isScreenSharing ? '🔴' : '💻'}
+                    </span>
+                    {isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setIsParticipantsOpen(!isParticipantsOpen)}
+                style={{
+                  padding: '8px 8px',
+                  backgroundColor: isParticipantsOpen ? '#8ab4f8' : '#3c4043',
+                  color: isParticipantsOpen ? '#202124' : 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                People ({Array.from(connectedPeers).length + 1})
+              </button>
+              <button
+                onClick={() => setIsChatOpen(!isChatOpen)}
+                style={{
+                  padding: '8px 8px',
+                  backgroundColor: isChatOpen ? '#8ab4f8' : '#3c4043',
+                  color: isChatOpen ? '#202124' : 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Chat
+              </button>
+              <button
+                onClick={() => toggleView()}
+                style={{
+                  padding: '8px 8px',
+                  backgroundColor: '#3c4043',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                {currentView === 'vr' ? 'Enter Video Chat' : 'Enter VR'}
+              </button>
+              <button
+                onClick={onLeaveRoom}
+                style={{
+                  padding: '8px 8px',
+                  backgroundColor: '#ea4335',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+  
+          {/* Main Content */}
+          <div style={{ 
+            display: 'flex',
+            position: 'relative',
+            height: 'calc(100%)',
+            pointerEvents: 'none'
+          }}>
+            {/* Video Grid - Only visible in video mode, positioned on the right */}
+            {currentView === 'video' && (
+              <VideoGrid
+                localStream={localStream}
+                peerStreams={peerStreams}
+                userName={userName}
+                isVideoEnabled={isVideoEnabled}
+                isAudioEnabled={isAudioEnabled}
+                users={users}
+                focusedVideo={focusedVideo}
+                setFocusedVideo={setFocusedVideo}
+              />
             )}
   
-            {isChatOpen && (
-              <div style={{
-                width: '320px',
-                borderLeft: '1px solid #3c4043',
-                backgroundColor: 'rgba(32, 33, 36, 0.95)',
-                display: 'flex',
-                flexDirection: 'column'
-              }}>
-                <div style={{ padding: '16px', borderBottom: '1px solid #3c4043' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.125rem', color: 'white' }}>Chat</h3>
+            {/* Sidebars - Always visible if open */}
+            <div style={{ 
+              display: 'flex',
+              position: 'absolute',
+              right: 0,
+              height: '100%',
+              pointerEvents: 'auto'
+            }}>
+              {isParticipantsOpen && (
+                <div style={{
+                  width: '320px',
+                  borderLeft: '1px solid #3c4043',
+                  backgroundColor: 'rgba(32, 33, 36, 0.95)',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  <div style={{ padding: '16px', borderBottom: '1px solid #3c4043' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.125rem', color: 'white' }}>People</h3>
+                  </div>
+                  <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+                    {users.map(user => (
+                      <div 
+                        key={user.id}
+                        style={{
+                          padding: '12px',
+                          marginBottom: '8px',
+                          backgroundColor: '#303134',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          color: 'white'
+                        }}
+                      >
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          backgroundColor: '#8ab4f8',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#202124',
+                          fontWeight: '500'
+                        }}>
+                          {user.name[0].toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: user.id === myPeerId ? '500' : 'normal' }}>
+                            {user.name} {user.id === myPeerId && '(You)'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div 
-                  ref={chatContainerRef}
-                  style={{ 
-                    flex: 1,
-                    overflow: 'auto',
-                    padding: '16px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '8px'
-                  }}
-                >
-                  {messages.map((message, index) => (
-                    <ChatMessage 
-                      key={message.id || index}
-                      message={message}
-                      currentUserId={myPeerId}
-                    />
-                  ))}
-                </div>
-                <form 
-                  onSubmit={handleSendMessage}
-                  style={{ 
-                    padding: '16px',
-                    borderTop: '1px solid #3c4043',
-                    backgroundColor: 'rgba(32, 33, 36, 0.95)'
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      backgroundColor: '#303134',
-                      border: '1px solid #3c4043',
-                      borderRadius: '4px',
-                      color: 'white',
-                      fontSize: '0.875rem'
+              )}
+  
+              {isChatOpen && (
+                <div style={{
+                  width: '320px',
+                  borderLeft: '1px solid #3c4043',
+                  backgroundColor: 'rgba(32, 33, 36, 0.95)',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}>
+                  <div style={{ padding: '16px', borderBottom: '1px solid #3c4043' }}>
+                    <h3 style={{ margin: 0, fontSize: '1.125rem', color: 'white' }}>Chat</h3>
+                  </div>
+                  <div 
+                    ref={chatContainerRef}
+                    style={{ 
+                      flex: 1,
+                      overflow: 'auto',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
                     }}
-                  />
-                </form>
-              </div>
-            )}
+                  >
+                    {messages.map((message, index) => (
+                      <ChatMessage 
+                        key={message.id || index}
+                        message={message}
+                        currentUserId={myPeerId}
+                      />
+                    ))}
+                  </div>
+                  <form 
+                    onSubmit={handleSendMessage}
+                    style={{ 
+                      padding: '16px',
+                      borderTop: '1px solid #3c4043',
+                      backgroundColor: 'rgba(32, 33, 36, 0.95)'
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type a message..."
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        backgroundColor: '#303134',
+                        border: '1px solid #3c4043',
+                        borderRadius: '4px',
+                        color: 'white',
+                        fontSize: '0.875rem'
+                      }}
+                    />
+                  </form>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
