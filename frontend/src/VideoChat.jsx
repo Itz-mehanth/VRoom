@@ -435,7 +435,7 @@ const ChatMessage = ({ message, currentUserId }) => {
       // Initialize animation state tracking
       animationStateRef.current = new Map();
   
-      if(false){
+      if(true){
         // Connect to socket.io backend
         const socketUrl = 'https://vrroom-x6vw.onrender.com';
         socketRef.current = io(socketUrl, {
