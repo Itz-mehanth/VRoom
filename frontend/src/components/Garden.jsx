@@ -1,11 +1,11 @@
-import React, { useRef } from 'react'
+import React, { useRef, forwardRef } from 'react'
 import { Billboard, Text, useGLTF } from '@react-three/drei'
 
-export default function Garden(props) {
+const Garden = forwardRef((props, ref) => {
   const { nodes, materials } = useGLTF('/models/environment.glb')
 
   return (
-    <group {...props} dispose={null}>
+    <group ref={ref} {...props} dispose={null}>
       <Billboard position={[0, 25, 0]}>
         <Text fontSize={4} color="black" anchorX="center" anchorY="middle">
           Herbal Garden
@@ -1194,6 +1194,10 @@ export default function Garden(props) {
       />
     </group>
   )
-}
+})
+
+Garden.displayName = 'Garden'
+
+export default Garden
 
 useGLTF.preload('/models/environment.glb')

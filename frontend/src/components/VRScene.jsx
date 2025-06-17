@@ -172,12 +172,8 @@ const ModelRegistry = ({ children }) => {
   useEffect(() => {
     const loadModels = async () => {
       const modelPaths = {
-        'plant1': '/models/plants/plant1.glb',
-        'plant2': '/models/plants/plant2.glb',
-        'plant3': '/models/plants/plant3.glb',
-        'fertilizer1': '/models/fertilizers/fertilizer1.glb',
-        'fertilizer2': '/models/fertilizers/fertilizer2.glb',
-        'waterJug': '/models/assets/waterJug1.glb',
+        'head': '/models/head.glb',
+        'waterJug': '/models/environment.glb',
       };
 
       const loader = new GLTFLoader();
