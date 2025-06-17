@@ -16,7 +16,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // Enable CORS
 app.use(cors({
-  origin: [FRONTEND_URL, "https://localhost:5173"],
+  origin: [FRONTEND_URL, "https://localhost:5173", "https://vrroom.netlify.app"],
   methods: ["GET", "POST"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"]
@@ -45,7 +45,7 @@ const peerServer = ExpressPeerServer(server, {
   path: '/',
   key: 'peerjs',
   corsOptions: {
-    origin: [FRONTEND_URL, "https://localhost:5173"],
+    origin: [FRONTEND_URL, "https://localhost:5173", "https://vrroom.netlify.app"],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -56,7 +56,7 @@ app.use('/peerjs', peerServer);
 
 const io = socketIO(server, {
   cors: {
-    origin: [FRONTEND_URL, "https://localhost:5173"],
+    origin: [FRONTEND_URL, "https://localhost:5173", "https://vrroom.netlify.app"],
     methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"]
