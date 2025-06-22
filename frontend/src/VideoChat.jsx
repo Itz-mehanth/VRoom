@@ -220,7 +220,9 @@ const ChatMessage = ({ message, currentUserId }) => {
     users, 
     setUsers, 
     currentView,
-    setSocket
+    setSocket,
+    setEnterAr,
+    enterAr
   }) => {
     const videoRef = useRef();
     const peerInstanceRef = useRef();
@@ -893,6 +895,19 @@ const ChatMessage = ({ message, currentUserId }) => {
                 }}
               >
                 People ({Array.from(connectedPeers).length + 1})
+              </button>
+              <button
+                onClick={() => setEnterAr(!enterAr)}
+                  style={{
+                    padding: '8px 8px',
+                    backgroundColor: isChatOpen ? '#8ab4f8' : '#3c4043',
+                    color: isChatOpen ? '#202124' : 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+              >
+                AR
               </button>
               <button
                 onClick={() => setIsChatOpen(!isChatOpen)}

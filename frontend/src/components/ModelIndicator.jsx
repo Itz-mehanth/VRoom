@@ -17,21 +17,9 @@ const ModelIndicator = ({ position, name, isHovered, modelStats, heldItem }) => 
 
   const getIndicatorText = () => {
     if (!heldItem) return '';
-
-    const stats = modelStats || { water: 0, fertilizer1: 0, fertilizer2: 0 };
-    
-    switch(heldItem.type) {
-      case 'asset':
-        return `Water: ${stats.water}L`;
-      case 'fertilizer':
-        if (heldItem.id === 'fertilizer1') {
-          return `Fertilizer 1: ${stats.fertilizer1}g`;
-        } else {
-          return `Fertilizer 2: ${stats.fertilizer2}g`;
-        }
-      default:
-        return '';
-    }
+    if (!modelStats) return 'loading...';
+    const value = modelStats['nutrients'][heldItem.category] || 0;
+    return `${heldItem.category}: ${value}`;
   };
 
   const getIndicatorColor = () => {

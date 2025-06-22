@@ -19,9 +19,7 @@ body {
   justify-content: center;
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   padding: 20px;
-  position: fixed;
-  top: 0;
-  left: 0;
+  overflow: 'auto';
 }
 
 .home-card {

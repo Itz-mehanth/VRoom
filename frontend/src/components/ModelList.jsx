@@ -80,11 +80,14 @@ async function loadPlants() {
 
         return {
           id: docSnap.id,
+          ...data,
           name: data.name || docSnap.id,
           description: data.description || '',
           thumbnail: data.thumbnail || '/models/thumbnails/default.png',
           stages: validStages,
-          type: 'plant'
+          modelPath: validStages[0].modelPath, // Use the first stage's modelPath as the default
+          type: 'plant',
+          category: docSnap.id
         };
       } catch (modelError) {
         console.error('Error processing model:', docSnap.id, modelError);
@@ -115,6 +118,7 @@ async function loadAssets() {
         console.log('Asset data:', data);
 
         return {
+          category: docSnap.id,
           id: data.id,
           name: data.name || data.id,
           description: data.description || '',
@@ -152,6 +156,7 @@ async function loadFertilizers() {
         console.log('Fertilizer data:', data);
 
         return {
+          category: docSnap.id,
           id: data.id,
           modelPath: data.modelPath,
           name: data.name || data.id,
@@ -225,10 +230,12 @@ const ModelList = ({
       // If clicking the same item, deselect it
       setHeldItem(null);
     } else {
-      // If clicking a different item or no item was selected
-      // Make sure we have the correct structure with stages
-      console.log("Setting held item:", item);
-      setHeldItem(item);
+      // Set heldItem with category and type
+      setHeldItem({
+        ...item,
+        type: type, // Use the type passed in
+        category: item.category || 'default', // Use category if available, otherwise default
+      });
     }
   };
 

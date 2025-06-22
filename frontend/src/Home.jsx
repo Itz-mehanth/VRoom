@@ -1,13 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithGoogle, signOutUser } from './Firebase';
 import { useAuth } from './contexts/AuthContext';
 import './Home.css';
+import { MapContainer, TileLayer, useMapEvents, Marker } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import * as L from "leaflet";
+import { getAllPlantInstances } from './services/plantService';
+import { localToGeo } from './geoUtils';
+
+function MapClickHandler({ setCoords }) {
+  useMapEvents({
+    click(e) {
+      setCoords([e.latlng.lat, e.latlng.lng]);
+    },
+  });
+  return null;
+}
 
 const Home = () => {
   const [roomId, setRoomId] = useState('');
+  const [selectedCoords, setSelectedCoords] = useState(null);
   const navigate = useNavigate();
+  const [userCoords, setUserCoords] = useState(null);
   const { currentUser } = useAuth();
+  const [plantMarkers, setPlantMarkers] = useState([]);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserCoords([pos.coords.latitude, pos.coords.longitude]),
+        (err) => console.warn("Geolocation error:", err),
+        { enableHighAccuracy: true }
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    async function loadPlants() {
+      try {
+        const plants = await getAllPlantInstances();
+        setPlantMarkers(plants);
+      } catch (e) {
+        console.error('[Home] Failed to load plant instances:', e);
+      }
+    }
+    loadPlants();
+  }, []);
 
   const handleJoinRoom = async (e) => {
     e.preventDefault();
@@ -19,7 +58,12 @@ const Home = () => {
       alert('Please enter a room ID');
       return;
     }
-    navigate(`/room/${roomId}/user/${currentUser.uid}`);
+    // Add coordinates to the URL if selected
+    let url = `/room/${roomId}/user/${currentUser.uid}`;
+    if (selectedCoords) {
+      url += `?lat=${selectedCoords[0]}&lng=${selectedCoords[1]}`;
+    }
+    navigate(url);
   };
 
   const handleSignIn = async () => {
@@ -40,11 +84,48 @@ const Home = () => {
     }
   };
 
+  // Emoji icons for markers
+  const userEmojiIcon = L.divIcon({
+    className: '',
+    html: '<span style="font-size: 2rem;">📍</span>',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32],
+  });
+  const selectedEmojiIcon = L.divIcon({
+    className: '',
+    html: '<span style="font-size: 2rem;">🪧</span>',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32],
+  });
+  
+  const plantEmojiIcon = L.divIcon({
+    className: '',
+    html: '<span style="font-size: 2rem;">🌱</span>',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32],
+  });
+
   return (
     <div className="home-container">
       <div className="home-card">
         <h1 className="home-title">VR Room</h1>
-        
+         <MapContainer center={[20, 0]} zoom={2} style={{ height: "70vh" }}>
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <MapClickHandler setCoords={setSelectedCoords} />
+          {userCoords && <Marker icon={userEmojiIcon} position={userCoords} />}
+          {selectedCoords && <Marker icon={selectedEmojiIcon} position={selectedCoords} />}
+          {plantMarkers && plantMarkers.map((model, idx) => {
+            if (!model.position) return null;
+            // Use selectedCoords as origin if set, otherwise [0, 0] for global view
+            const origin = [0, 0];
+            const [x, , z] = model.position;
+            const [lat, lng] = localToGeo([x, z], origin);
+            return <Marker key={model.instanceId || idx} icon={plantEmojiIcon} position={[lat, lng]} />;
+          })}
+        </MapContainer>
         {!currentUser ? (
           <button
             onClick={handleSignIn}

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, memo } from 'react'
 import { Billboard, Text, useGLTF } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader'
 
 // Custom comparison function for memo
 const arePropsEqual = (prevProps, nextProps) => {
@@ -17,13 +18,63 @@ const arePropsEqual = (prevProps, nextProps) => {
 
 const Avatar = ({ position, userName, rotation, isWalking }) => {
   const group = useRef()
-  const { nodes, materials } = useGLTF('/models/head.glb')
-  
+  const { nodes, materials } = useGLTF('/models/character.glb')
+  const mixer = useRef(null)
+  const walkingAction = useRef(null)
+  const idleAction = useRef(null)
+
   // Initialize current position and rotation refs
   const currentPosition = useRef(
     position ? new THREE.Vector3(position.x, position.y, position.z) : new THREE.Vector3()
   )
+
   const currentRotation = useRef(rotation?.y || 0)
+
+  // Load and setup walking animation
+  useEffect(() => {
+    const loader = new FBXLoader()
+    loader.load('/animations/Walking-InPlace.fbx', (fbx) => {
+      if (group.current) {
+        const animation = fbx.animations[0]
+        mixer.current = new THREE.AnimationMixer(group.current)
+        walkingAction.current = mixer.current.clipAction(animation)
+        walkingAction.current.setEffectiveTimeScale(1)
+        walkingAction.current.setEffectiveWeight(1)
+        walkingAction.current.clampWhenFinished = true
+      }
+    })
+
+    loader.load('/animations/Breathing Idle.fbx', (fbx) => {
+      if (group.current) {
+        const animation = fbx.animations[0]
+        idleAction.current = mixer.current.clipAction(animation)
+        idleAction.current.setEffectiveTimeScale(1)
+        idleAction.current.setEffectiveWeight(1)
+        idleAction.current.clampWhenFinished = true
+        idleAction.current.play()
+      }
+    })
+  }, [])
+
+  // Handle walking animation
+  useEffect(() => {
+    if(!walkingAction.current && !idleAction.current) return
+
+    if (isWalking) {
+      idleAction.current.fadeOut(0.3);
+      walkingAction.current.reset().fadeIn(0.3).play();
+    } else {
+      walkingAction.current.fadeOut(0.3);
+      idleAction.current.reset().fadeIn(0.3).play();
+    }
+  }, [isWalking])
+
+  // Update animation mixer
+  useFrame((state, delta) => {
+    if (mixer.current) {
+      mixer.current.update(delta)
+    }
+  })
 
   // Cleanup function for materials and geometries
   useEffect(() => {
@@ -38,6 +89,9 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
           node.geometry.dispose()
         }
       })
+      if (mixer.current) {
+        mixer.current.stopAllAction()
+      }
     }
     return cleanup
   }, [materials, nodes])
@@ -105,30 +159,64 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
           <meshStandardMaterial color="white" />
         </mesh>
       </Billboard>
-      <group rotation={[0, Math.PI, 0]} position={[0, 0, 0]} scale={[0.5, 0.5, 0.5]}>
-        <mesh
-          castShadow
-          receiveShadow
-          geometry={nodes.Sphere001.geometry}
-          material={materials['Material.001']}
+      <group rotation={[Math.PI/2, Math.PI, 0]} position={[0, 0, 0]} scale={[0.6, 0.6, 0.6]}>
+        <primitive object={nodes.Hips} />
+        <skinnedMesh
+          name="EyeLeft"
+          geometry={nodes.EyeLeft.geometry}
+          material={materials.Wolf3D_Eye}
+          skeleton={nodes.EyeLeft.skeleton}
+          morphTargetDictionary={nodes.EyeLeft.morphTargetDictionary}
+          morphTargetInfluences={nodes.EyeLeft.morphTargetInfluences}
         />
-        <mesh
-          castShadow
-          receiveShadow
-          geometry={nodes.Sphere001_1.geometry}
-          material={materials['Material.002']}
+        <skinnedMesh
+          name="EyeRight"
+          geometry={nodes.EyeRight.geometry}
+          material={materials.Wolf3D_Eye}
+          skeleton={nodes.EyeRight.skeleton}
+          morphTargetDictionary={nodes.EyeRight.morphTargetDictionary}
+          morphTargetInfluences={nodes.EyeRight.morphTargetInfluences}
         />
-        <mesh
-          castShadow
-          receiveShadow
-          geometry={nodes.Sphere001_2.geometry}
-          material={materials['Material.003']}
+        <skinnedMesh
+          name="Wolf3D_Head"
+          geometry={nodes.Wolf3D_Head.geometry}
+          material={materials.Wolf3D_Skin}
+          skeleton={nodes.Wolf3D_Head.skeleton}
+          morphTargetDictionary={nodes.Wolf3D_Head.morphTargetDictionary}
+          morphTargetInfluences={nodes.Wolf3D_Head.morphTargetInfluences}
         />
-        <mesh
-          castShadow
-          receiveShadow
-          geometry={nodes.Sphere001_3.geometry}
-          material={materials['Material.004']}
+        <skinnedMesh
+          name="Wolf3D_Teeth"
+          geometry={nodes.Wolf3D_Teeth.geometry}
+          material={materials.Wolf3D_Teeth}
+          skeleton={nodes.Wolf3D_Teeth.skeleton}
+          morphTargetDictionary={nodes.Wolf3D_Teeth.morphTargetDictionary}
+          morphTargetInfluences={nodes.Wolf3D_Teeth.morphTargetInfluences}
+        />
+        <skinnedMesh
+          geometry={nodes.Wolf3D_Hair.geometry}
+          material={materials.Wolf3D_Hair}
+          skeleton={nodes.Wolf3D_Hair.skeleton}
+        />
+        <skinnedMesh
+          geometry={nodes.Wolf3D_Body.geometry}
+          material={materials.Wolf3D_Body}
+          skeleton={nodes.Wolf3D_Body.skeleton}
+        />
+        <skinnedMesh
+          geometry={nodes.Wolf3D_Outfit_Bottom.geometry}
+          material={materials.Wolf3D_Outfit_Bottom}
+          skeleton={nodes.Wolf3D_Outfit_Bottom.skeleton}
+        />
+        <skinnedMesh
+          geometry={nodes.Wolf3D_Outfit_Footwear.geometry}
+          material={materials.Wolf3D_Outfit_Footwear}
+          skeleton={nodes.Wolf3D_Outfit_Footwear.skeleton}
+        />
+        <skinnedMesh
+          geometry={nodes.Wolf3D_Outfit_Top.geometry}
+          material={materials.Wolf3D_Outfit_Top}
+          skeleton={nodes.Wolf3D_Outfit_Top.skeleton}
         />
       </group>
     </group>
@@ -136,6 +224,6 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
 }
 
 // Preload the model
-useGLTF.preload('/models/head.glb')
+useGLTF.preload('/models/character.glb')
 
 export default memo(Avatar, arePropsEqual);

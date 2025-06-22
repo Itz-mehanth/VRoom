@@ -5,9 +5,9 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import ModelIndicator from './ModelIndicator';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { getModelStats } from '../services/plantService'; // adjust path as needed
 
-
-const DroppedModel = ({ modelPath, position, onClick, name, description, setSelectedModel, setSelectedModelDetails, heldItem }) => {
+const DroppedModel = ({plantId, instanceId, modelPath, position, onClick, name, description, setSelectedModel, setSelectedModelDetails, heldItem, onPositionChange, feedPlant }) => {
   const meshRef = useRef();
   const modelRef = useRef();
   const draggableRef = useRef();
@@ -18,13 +18,25 @@ const DroppedModel = ({ modelPath, position, onClick, name, description, setSele
   const [modelWidth, setModelWidth] = useState(0);
   const originalMaterial = useRef();
   const [isHovered, setIsHovered] = useState(false);
-  const [modelStats, setModelStats] = useState({
-    water: 0,
-    fertilizer1: 0,
-  });
+  const [modelStats, setModelStats] = useState(null);
+  const [modelError, setModelError] = useState(false);
 
-  // Load the model
-  const gltf = useLoader(GLTFLoader, modelPath);
+  const gltf = useLoader(GLTFLoader, modelPath, (loader) => {
+      if (!modelPath) {
+        console.warn('No modelPath provided for DroppedModel');
+        return null;
+      }
+
+      try {
+        // Use a simple loader for now to avoid WebGL issues
+        return null; // We'll handle loading differently
+      } catch (error) {
+        console.error('Error loading model:', error);
+        setModelError(true);
+        return null;
+      }
+    }
+  );
 
   // Create a clone of the model when it's loaded
   const modelClone = useMemo(() => {
@@ -45,6 +57,21 @@ const DroppedModel = ({ modelPath, position, onClick, name, description, setSele
     }
   }, [modelClone]);
 
+  // Calculate model height on load
+  useEffect(() => {
+    if (modelClone) {
+      const box = new THREE.Box3().setFromObject(modelClone);
+      const height = box.max.y - box.min.y;
+      const width = box.max.x - box.min.x;
+      setModelHeight(height);
+      setModelWidth(width);
+    } else {
+      // Default dimensions if no model
+      setModelHeight(1);
+      setModelWidth(1);
+    }
+  }, [modelClone]);
+
   // Set initial material reference
   useFrame(() => {
     if (modelRef.current && !originalMaterial.current) {
@@ -55,22 +82,24 @@ const DroppedModel = ({ modelPath, position, onClick, name, description, setSele
     }
   });
 
+  useEffect(() => {
+    let isMounted = true;
+    console.log('plantId:', plantId, 'instanceId:', instanceId);
+    if (plantId && instanceId) {
+      getModelStats(plantId, instanceId).then(stats => {
+        console.log('model stats: ', stats);
+        if (isMounted) setModelStats(stats);
+      });
+    }
+    return () => { isMounted = false; };
+  }, [modelPath, plantId, instanceId]);
+
   // Handle item application
   const handleClick = (e) => {
     e.stopPropagation();
-    if (heldItem) {
-      // Update stats based on held item type
-      setModelStats(prev => {
-        const newStats = { ...prev };
-        if (heldItem.type === 'asset') {
-          newStats.water += 1; // Add 1 liter of water
-        } else if (heldItem.type === 'fertilizer') {
-          if (heldItem.id === 'fertilizer1') {
-            newStats.fertilizer1 += 100; // Add 100g of fertilizer1
-          }
-        }
-        return newStats;
-      });
+    if (heldItem && heldItem.type && heldItem.category) {
+      // Use the specific type as the stat key
+      handleFeed(heldItem.type, 1); // You may want to adjust the amount based on item type
     } else if (!isDragging) {
       setSelectedModel(modelPath);
       setSelectedModelDetails({
@@ -99,7 +128,46 @@ const DroppedModel = ({ modelPath, position, onClick, name, description, setSele
     }
   });
 
-  if (!modelClone) return null;
+  // Handle drag end to update position
+  const handleDragEnd = (e) => {
+    e.stopPropagation();
+    setIsDragging(false);
+    const mesh = modelRef.current;
+    if (mesh && originalMaterial.current) {
+      mesh.material = originalMaterial.current.clone();
+    }
+    
+    // Update position if onPositionChange is provided
+    if (onPositionChange && meshRef.current) {
+      const newPosition = meshRef.current.position.toArray();
+      onPositionChange(newPosition);
+    }
+  };
+
+  const handleFeed = async (type, amount) => {
+    await feedPlant(plantId, instanceId, type, amount);
+    const updatedStats = await getModelStats(plantId, instanceId);
+    setModelStats(updatedStats);
+  };
+
+  // If there's an error or no modelPath, render a placeholder
+  if (modelError || !modelPath || !modelClone) {
+    return (
+      <mesh position={adjustedPosition}>
+        <boxGeometry args={[1, 1, 1]} />
+        <meshStandardMaterial color="red" />
+        <Text
+          position={[0, 1.5, 0]}
+          fontSize={0.2}
+          color="white"
+          anchorX="center"
+          anchorY="middle"
+        >
+          {name || 'Model'}
+        </Text>
+      </mesh>
+    );
+  }
 
   return (
     <>
@@ -117,50 +185,42 @@ const DroppedModel = ({ modelPath, position, onClick, name, description, setSele
             mesh.material.emissive = new THREE.Color(0x00ffff);
           }
         }}
-        onDragEnd={(e) => {
-          e.stopPropagation();
-          setIsDragging(false);
-          const mesh = modelRef.current;
-          if (mesh && originalMaterial.current) {
-            mesh.material = originalMaterial.current.clone();
-          }
-        }}
+        onDragEnd={handleDragEnd}
       >
-        <group
-          ref={meshRef}
-          position={adjustedPosition}
-          onClick={handleClick}
-          onPointerOver={(e) => {
-            e.stopPropagation();
-            document.body.style.cursor = 'grab';
-            setIsHovered(true);
-          }}
-          onPointerOut={(e) => {
-            e.stopPropagation();
-            document.body.style.cursor = 'auto';
-            setIsHovered(false);
-          }}
-          onTouchStart={(e) => {
-            e.stopPropagation();
-            setIsHovered(true);
-            handleClick(e);
-          }}
-          onTouchEnd={(e) => {
-            e.stopPropagation();
-            setIsHovered(false);
-          }}
-        >
           <mesh ref={modelRef}>
-            <primitive object={modelClone} />
+            <primitive
+              ref={meshRef}
+              scale={0.4}
+              position={adjustedPosition}
+              onClick={handleClick}
+              onPointerOver={(e) => {
+                e.stopPropagation();
+                document.body.style.cursor = 'grab';
+                setIsHovered(true);
+              }}
+              onPointerOut={(e) => {
+                e.stopPropagation();
+                document.body.style.cursor = 'auto';
+                setIsHovered(false);
+              }}
+              onTouchStart={(e) => {
+                e.stopPropagation();
+                setIsHovered(true);
+                handleClick(e);
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation();
+                setIsHovered(false);
+              }}
+            object={modelClone} />
           </mesh>
-        </group>
       </DragControls>
       
       {/* ModelIndicator outside the DragControls */}
       <ModelIndicator 
         position={[
           adjustedPosition[0],
-          adjustedPosition[1] + modelHeight, // Increased height to separate from name label
+          adjustedPosition[1] + 1, // Increased height to separate from name label
           adjustedPosition[2]
         ]}
         name={name}

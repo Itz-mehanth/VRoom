@@ -4,6 +4,12 @@ import Home from './Home';
 import VRScene from './components/VRScene';
 import VideoChat from './VideoChat';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import ARPage from './components/ARPage';
+import { useLocation } from "react-router-dom";
+
+function useQuery() {
+  return new URLSearchParams(useLocation().search);
+}
 
 const Room = () => {
   const { roomId, userId } = useParams();
@@ -11,6 +17,11 @@ const Room = () => {
   const [currentView, setCurrentView] = useState('vr');
   const [users, setUsers] = useState([]);
   const [socket, setSocket] = useState(null);
+  const [enterAr, setEnterAr] = useState(false);
+  const query = useQuery();
+  const lat = query.get("lat");
+  const lng = query.get("lng");
+  const coords = lat && lng ? [parseFloat(lat), parseFloat(lng)] : null;
 
   // Toggle view
   const toggleView = () => {
@@ -23,40 +34,50 @@ const Room = () => {
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
-      {/* VR Scene as base layer */}
-      <div style={{ 
-        position: 'absolute', 
-        top: 0, 
-        left: 0, 
-        width: '100%', 
-        height: '100%', 
-        zIndex: 0,
-        pointerEvents: currentView === 'vr' ? 'auto' : 'none'
-      }}>
-        <VRScene
-          roomId={roomId}
-          userName={currentUser.displayName}
-          users={users}
-          toggleView={toggleView}
-          socket={socket}
-        />
-      </div>
+      {!enterAr &&
+        <>
+        <div style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          width: '100%', 
+          height: '100%', 
+          zIndex: 0,
+          pointerEvents: currentView === 'vr' ? 'auto' : 'none'
+        }}>
+          <VRScene
+            coords={coords}
+            roomId={roomId}
+            userName={currentUser.displayName}
+            users={users}
+            toggleView={toggleView}
+            socket={socket}
+            enterAr={enterAr}
+            />
+        </div>
+        </>
+      }
 
-      {/* Video Chat UI layer */}
+      {enterAr && (
+           <ARPage coords={coords} onExit={() => setEnterAr(false)} />
+      )}
+
       <div style={{ 
         zIndex: 1,
         pointerEvents: 'none'
       }}>
-        <VideoChat
-          roomId={roomId}
-          userName={currentUser.displayName}
-          toggleView={toggleView}
-          currentView={currentView}
-          users={users}
-          setUsers={setUsers}
-          setSocket={setSocket}
-        />
-      </div>
+          <VideoChat
+            roomId={roomId}
+            userName={currentUser.displayName}
+            toggleView={toggleView}
+            currentView={currentView}
+            users={users}
+            setUsers={setUsers}
+            setSocket={setSocket}
+            setEnterAr = {setEnterAr}
+            enterAr={enterAr}
+          />
+        </div>
     </div>
   );
 };
