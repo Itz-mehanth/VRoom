@@ -87,22 +87,21 @@ const Home = () => {
   // Emoji icons for markers
   const userEmojiIcon = L.divIcon({
     className: '',
-    html: '<span style="font-size: 2rem;">📍</span>',
+    html: `<span style='font-size: 32px;'>🔵</span>`,
     iconSize: [32, 32],
     iconAnchor: [16, 32],
     popupAnchor: [0, -32],
   });
   const selectedEmojiIcon = L.divIcon({
     className: '',
-    html: '<span style="font-size: 2rem;">🪧</span>',
+    html: `<span style='font-size: 32px;'>🔴</span>`,
     iconSize: [32, 32],
     iconAnchor: [16, 32],
     popupAnchor: [0, -32],
   });
-  
-  const plantEmojiIcon = L.divIcon({
+  const plantEmojiIcon = (lat, lng) => L.divIcon({
     className: '',
-    html: '<span style="font-size: 2rem;">🌱</span>',
+    html: `<span style='font-size: 32px;'>🟢</span>`,
     iconSize: [32, 32],
     iconAnchor: [16, 32],
     popupAnchor: [0, -32],
@@ -119,11 +118,10 @@ const Home = () => {
           {selectedCoords && <Marker icon={selectedEmojiIcon} position={selectedCoords} />}
           {plantMarkers && plantMarkers.map((model, idx) => {
             if (!model.position) return null;
-            // Use selectedCoords as origin if set, otherwise [0, 0] for global view
             const origin = [0, 0];
             const [x, , z] = model.position;
             const [lat, lng] = localToGeo([x, z], origin);
-            return <Marker key={model.instanceId || idx} icon={plantEmojiIcon} position={[lat, lng]} />;
+            return <Marker key={model.instanceId || idx} icon={plantEmojiIcon(lat, lng)} position={[lat, lng]} />;
           })}
         </MapContainer>
         {!currentUser ? (

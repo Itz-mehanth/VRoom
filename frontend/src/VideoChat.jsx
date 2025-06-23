@@ -813,8 +813,6 @@ const ChatMessage = ({ message, currentUserId }) => {
           {/* Header - Always visible */}
           <div style={{ 
             padding: '12px 24px',
-            backgroundColor: 'rgba(32, 33, 36, 0.9)',
-            borderBottom: '1px solid #3c4043',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -838,7 +836,7 @@ const ChatMessage = ({ message, currentUserId }) => {
                       gap: '6px'
                     }}
                   >
-                    <span style={{ fontSize: '1.2em', lineHeight: 1 }}>
+                    <span style={{ fontSize: '16px', lineHeight: 1 }}>
                       {isVideoEnabled ? '📹' : '🚫'}
                     </span>
                     {isVideoEnabled ? 'Video On' : 'Video Off'}
@@ -857,7 +855,7 @@ const ChatMessage = ({ message, currentUserId }) => {
                       gap: '6px'
                     }}
                   >
-                    <span style={{ fontSize: '1.2em', lineHeight: 1 }}>
+                    <span style={{ fontSize: '16px', lineHeight: 1 }}>
                       {isAudioEnabled ? '🎤' : '🔇'}
                     </span>
                     {isAudioEnabled ? 'Audio On' : 'Audio Off'}
@@ -876,7 +874,7 @@ const ChatMessage = ({ message, currentUserId }) => {
                       gap: '6px'
                     }}
                   >
-                    <span style={{ fontSize: '1.2em', lineHeight: 1 }}>
+                    <span style={{ fontSize: '16px', lineHeight: 1 }}>
                       {isScreenSharing ? '🔴' : '💻'}
                     </span>
                     {isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
@@ -903,6 +901,7 @@ const ChatMessage = ({ message, currentUserId }) => {
                     backgroundColor: isChatOpen ? '#8ab4f8' : '#3c4043',
                     color: isChatOpen ? '#202124' : 'white',
                     border: 'none',
+                    fontSize: '16px',
                     borderRadius: '4px',
                     cursor: 'pointer'
                   }}

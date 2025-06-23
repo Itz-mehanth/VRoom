@@ -21,9 +21,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { TileLayer, Marker, MapContainer } from "react-leaflet";
 import L from "leaflet";
 import {XR} from '@react-three/xr';
-import { localToGeo } from '../geoUtils';
+import { localToGeo, geoToLocal } from '../geoUtils';
 
-function WorldMap({coords, placedModels = [], userMarkerPosition = null}) {
+function WorldMap({coords, placedModels = [], userMarkerPosition = null, peers = []}) {
   // Fallback center if coords is not valid
   const hasCoords = Array.isArray(coords) && coords.length === 2 && coords.every(Number.isFinite);
   const center = hasCoords ? coords : [0, 0];
@@ -31,13 +31,15 @@ function WorldMap({coords, placedModels = [], userMarkerPosition = null}) {
   const origin = [0, 0];
 
   // Custom emoji marker component
-  function EmojiMarker({ position, emoji }) {
+  function EmojiMarker({ position, emoji, label, isPeer }) {
     return (
       <Marker position={position} icon={L.divIcon({
         className: '',
-        html: `<div style='font-size: 28px; line-height: 1;'>${emoji}</div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
+        html: isPeer
+          ? `<div style='display: flex; flex-direction: column; align-items: center;'>\
+                <span style='display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: #1976d2; color: #fff; font-size: 18px; font-weight: bold; border: 2px solid #fff;'>${label}</span>\
+             </div>`
+          : `<span style='font-size: 32px; line-height: 1;'>${emoji}</span>`
       })} />
     );
   }
@@ -47,12 +49,12 @@ function WorldMap({coords, placedModels = [], userMarkerPosition = null}) {
       <MapContainer center={center} zoom={zoom} style={{ height: "100%", width: "100%" }}>
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         {/* User marker: use userMarkerPosition if provided, else coords */}
-        {userMarkerPosition && <EmojiMarker position={userMarkerPosition} emoji="📍" />}
+        {userMarkerPosition && <EmojiMarker position={userMarkerPosition} emoji="🔵" label={`${userMarkerPosition[0]}, ${userMarkerPosition[1]}`} />}
         {placedModels && placedModels.map((model, idx) => {
           if (!model.position) return null;
           const [x, , z] = model.position;
           const [lat, lng] = localToGeo([x, z], origin);
-          return <EmojiMarker key={model.instanceId || idx} position={[lat, lng]} emoji="🌱" />;
+          return <EmojiMarker key={model.instanceId || idx} position={[lat, lng]} emoji="🟢" label={`${lat}, ${lng}`} />;
         })}
       </MapContainer>
     </Fragment>
@@ -68,7 +70,18 @@ const Rig = ({ userName, socket, position, setPosition, isWalking, enterAr }) =>
   const cameraTargetRef = useRef(new THREE.Vector3());
   const [isColliding, setIsColliding] = useState(false);
 
-  useFrame((state, delta) => { 
+  // Only update OrbitControls target when teleporting or entering a new room
+  useEffect(() => {
+    if (mobileControlsRef.current && !(isPC && !enterAr)) {
+      // Set target to a point in front of the new position
+      const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      const target = new THREE.Vector3(position.x, position.y, position.z).add(forward);
+      mobileControlsRef.current.target.copy(target);
+      mobileControlsRef.current.update();
+    }
+  }, [position.x, position.y, position.z, camera, enterAr]);
+
+  useFrame((state, delta) => {
     if (!rigRef.current) return;
 
     // Calculate 2D angle from camera direction
@@ -100,16 +113,15 @@ const Rig = ({ userName, socket, position, setPosition, isWalking, enterAr }) =>
           y: rigRef.current.position.y,
           z: newZ
         };
-        
+
         rigRef.current.position.x = newPosition.x;
         rigRef.current.position.z = newPosition.z;
 
-        // Update camera target position
-        cameraTargetRef.current.set(newPosition.x, newPosition.y, newPosition.z);
-        
-        // Smoothly interpolate camera position
-        camera.position.lerp(cameraTargetRef.current, 0.1);
-        
+        // Only update camera position if using PointerLockControls (PC)
+        if (isPC && !enterAr) {
+          cameraTargetRef.current.set(newPosition.x, newPosition.y, newPosition.z);
+          camera.position.lerp(cameraTargetRef.current, 0.1);
+        }
         setPosition(newPosition);
 
         if (shouldUpdate) {
@@ -135,7 +147,7 @@ const Rig = ({ userName, socket, position, setPosition, isWalking, enterAr }) =>
         z: 0,
       };
 
-      socket.emit('update-transform', { 
+      socket.emit('update-transform', {
         position: rigRef.current.position, 
         userName,
         rotation: newRotation,
@@ -145,13 +157,6 @@ const Rig = ({ userName, socket, position, setPosition, isWalking, enterAr }) =>
     }
   });
 
-  // Ensure rig position updates when position prop changes
-  useEffect(() => {
-    if (rigRef.current) {
-      rigRef.current.position.set(position.x, position.y, position.z);
-    }
-  }, [position]);
-
   return (
     <group ref={rigRef} position={[position.x, position.y, position.z]}>
       {isPC && !enterAr ? (
@@ -159,8 +164,8 @@ const Rig = ({ userName, socket, position, setPosition, isWalking, enterAr }) =>
       ) : (
         <OrbitControls 
           ref={mobileControlsRef}
-          position={[position.x, position.y, position.z]}
-          target={[position.x, position.y, position.z]}
+          // position={[position.x, position.y, position.z]}
+          // target={cameraTargetRef.current}
           enableZoom={false}
           enablePan={false}
           enableRotate={true}
@@ -286,27 +291,17 @@ export default function VRScene ({ roomId, userName, users, toggleView, socket, 
   }
 
 
-  function geoToLocalOffset(current, target) {
-    const earthRadius = 6371000; // meters
-    const dLat = (target[0] - current[0]) * Math.PI / 180;
-    const dLng = (target[1] - current[1]) * Math.PI / 180;
-    const avgLat = ((current[0] + target[0]) / 2) * Math.PI / 180;
-    const x = dLng * Math.cos(avgLat) * earthRadius;
-    const z = dLat * earthRadius;
-    return [x, 1.7, z];
-  }
-
   // Set initial position based on coords and update when coords change
   const [position, setPosition] = useState(() => {
     const origin = [0, 0];
     if (coords) {
-      const [x, y, z] = geoToLocalOffset(origin, coords);
+      const [x, y, z] = geoToLocal(coords, origin);
       return { x, y: 1.7, z };
     }
     return { x: 0, y: 1.7, z: 5 };
   });
 
-  // Only show alert once per unique coords
+  // Only update position from coords when coords actually change (teleport/new room)
   const lastCoordsRef = useRef(null);
   useEffect(() => {
     const origin = [0, 0];
@@ -314,10 +309,7 @@ export default function VRScene ({ roomId, userName, users, toggleView, socket, 
       const coordsString = coords.join(',');
       if (lastCoordsRef.current !== coordsString) {
         lastCoordsRef.current = coordsString;
-        const [x, y, z] = geoToLocalOffset(origin, coords);
-        setPosition({ x, y: 1.7, z });
-      } else {
-        const [x, y, z] = geoToLocalOffset(origin, coords);
+        const [x, y, z] = geoToLocal(coords, origin);
         setPosition({ x, y: 1.7, z });
       }
     }
@@ -831,7 +823,6 @@ export default function VRScene ({ roomId, userName, users, toggleView, socket, 
           coords={coords}
           placedModels={placedModels}
           userMarkerPosition={(() => {
-            // Convert rig/camera position to lat/lng for the user marker
             if (position && Array.isArray(coords) && coords.length === 2) {
               const origin = [0, 0];
               const [lat, lng] = localToGeo([position.x, position.z], origin);
@@ -840,6 +831,7 @@ export default function VRScene ({ roomId, userName, users, toggleView, socket, 
             return coords;
           })()}
         />
+      
       </div>
 
       <ModelList
