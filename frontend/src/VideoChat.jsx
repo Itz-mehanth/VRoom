@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, memo } from 'react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
+import { useNavigate } from 'react-router-dom';
 
 const ChatMessage = ({ message, currentUserId }) => {
     const isSystem = message.type === 'system';
@@ -798,15 +799,29 @@ const ChatMessage = ({ message, currentUserId }) => {
     return (
       <div className="relative">
         {notification && (
-          <div className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded shadow-lg z-50">
+          <div 
+            style={{
+              position: 'fixed',
+              top: '16px',
+              right: '16px',
+              backgroundColor: '#8ab4f8',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+              zIndex: 1000,
+              transition: 'opacity 0.3s ease-in-out',
+              opacity: notification ? 1 : 0,
+              pointerEvents: 'auto'
+            }}
+          >
             {notification}
           </div>
         )}
         <div style={{ 
-          position: 'absolute',
+          position: 'fixed',
           top: 0,
-          left: 0,  
-          width: '100%',
+          right: 0,  
           height: '100%',
           pointerEvents: 'none'
         }}>
@@ -982,6 +997,7 @@ const ChatMessage = ({ message, currentUserId }) => {
               {isParticipantsOpen && (
                 <div style={{
                   width: '320px',
+                  height: 'calc(100vh - 160px)',
                   borderLeft: '1px solid #3c4043',
                   backgroundColor: 'rgba(32, 33, 36, 0.95)',
                   display: 'flex',
@@ -1032,6 +1048,7 @@ const ChatMessage = ({ message, currentUserId }) => {
               {isChatOpen && (
                 <div style={{
                   width: '320px',
+                  height: 'calc(100vh - 160px)',
                   borderLeft: '1px solid #3c4043',
                   backgroundColor: 'rgba(32, 33, 36, 0.95)',
                   display: 'flex',

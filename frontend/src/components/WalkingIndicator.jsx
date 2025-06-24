@@ -3,7 +3,7 @@ import React from 'react';
 const WalkingIndicator = ({ isWalking }) => {
   return (
     <div style={{
-      position: 'absolute',
+      position: 'fixed',
       top: '80px',
       right: '20px',
       backgroundColor: isWalking ? '#4CAF50' : '#f44336',

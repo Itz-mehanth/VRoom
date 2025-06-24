@@ -159,7 +159,7 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
           <meshStandardMaterial color="white" />
         </mesh>
       </Billboard>
-      <group rotation={[Math.PI/2, Math.PI, 0]} position={[0, 0, 0]} scale={[0.6, 0.6, 0.6]}>
+      <group rotation={[Math.PI/2, Math.PI, 0]} position={[0, 0, 0]} scale={[0.3, 0.3, 0.3]}>
         <primitive object={nodes.Hips} />
         <skinnedMesh
           name="EyeLeft"

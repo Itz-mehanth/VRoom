@@ -243,9 +243,9 @@ const ModelList = ({
     <>
       {/* Floating Models Button */}
       <div style={{
-        position: 'absolute',
-        top: '80px',
-        left: '20px',
+        position: 'fixed',
+        top: '10px',
+        left: '150px',
         backgroundColor: isPlantListOpen ? '#8ab4f8' : 'rgba(32, 33, 36, 0.8)',
         color: isPlantListOpen ? '#202124' : 'white',
         padding: '8px 16px',
@@ -262,15 +262,14 @@ const ModelList = ({
         e.stopPropagation();
         onPlantToggle();
       }}>
-        <span style={{ fontSize: '1.2em', lineHeight: 1 }}>🎨</span>
-        {/* {isPlantListOpen ? 'Hide Plants' : 'Show Plants'} */}
+        <span style={{ fontSize: '1.2em', lineHeight: 1 }}>🪴</span>
       </div>
       
       {/* Fertilizer Button */}
       <div style={{
-        position: 'absolute',
-        top: '80px',
-        left: '90px',
+        position: 'fixed',
+        top: '10px',
+        left: '220px',
         backgroundColor: isFertilizerListOpen ? '#8ab4f8' : 'rgba(32, 33, 36, 0.8)',
         color: isFertilizerListOpen ? '#202124' : 'white',
         padding: '8px 16px',
@@ -287,22 +286,21 @@ const ModelList = ({
         e.stopPropagation();
         onFertilizerToggle();
       }}>
-        <span style={{ fontSize: '1.2em', lineHeight: 1 }}>🌱</span>
-        {/* {isFertilizerListOpen ? 'Hide Fertilizers' : 'Show Fertilizers'} */}
+        <span style={{ fontSize: '1.2em', lineHeight: 1 }}>🧃</span>
       </div>
 
       {/* Assets Button */}
       <div style={{
-        position: 'absolute',
-        top: '80px',
-        left: '160px',
+        position: 'fixed',
+        top: '10px',
+        left: '290px',
         backgroundColor: isAssetListOpen ? '#8ab4f8' : 'rgba(32, 33, 36, 0.8)',
         color: isAssetListOpen ? '#202124' : 'white',
         padding: '8px 16px',
         borderRadius: '10px',
         cursor: 'pointer',
         fontWeight: 'bold',
-        zIndex: 10,
+        zIndex: 1000,
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
@@ -320,9 +318,9 @@ const ModelList = ({
       {(isPlantListOpen || isFertilizerListOpen || isAssetListOpen) && (
         <div 
           style={{
-            position: 'absolute',
-            top: '140px',
-            left: '20px',
+            position: 'fixed',
+            top: '50px',
+            left: '150px',
             width: '150px',
             backgroundColor: 'rgb(255, 255, 255, 0.8)',
             padding: '5px',

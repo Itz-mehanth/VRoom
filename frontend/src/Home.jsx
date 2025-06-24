@@ -111,7 +111,7 @@ const Home = () => {
     <div className="home-container">
       <div className="home-card">
         <h1 className="home-title">VR Room</h1>
-         <MapContainer center={[20, 0]} zoom={2} style={{ height: "70vh" }}>
+         <MapContainer center={[20, 0]} zoom={2} style={{ height: "35vh" }}>
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <MapClickHandler setCoords={setSelectedCoords} />
           {userCoords && <Marker icon={userEmojiIcon} position={userCoords} />}

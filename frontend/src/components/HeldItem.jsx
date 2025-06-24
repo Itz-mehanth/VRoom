@@ -47,7 +47,7 @@ export default function HeldItem({ item, onPlace, waterCapacity = 0 }) {
     e.stopPropagation();
     if (onPlace) {
       // If it's a water jug, check if it has water
-      if (item.type === 'waterJug' && item.currentCapacity <= 0) {
+      if (item.category === 'waterJug' && item.currentCapacity <= 0) {
         console.log('Water jug is empty! Go to the water pipe to refill.');
         return;
       }

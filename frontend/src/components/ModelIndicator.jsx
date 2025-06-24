@@ -2,18 +2,21 @@ import React from 'react';
 import LabelBillboard from './LabelBillboard';
 import { Billboard, Text } from '@react-three/drei';
 
-const ModelIndicator = ({ position, name, isHovered, modelStats, heldItem }) => {
-  // Don't show indicator if no item is held and model is hovered
-  if (!heldItem && isHovered) return null;
+const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
-  // Don't show if not hovered
-  if (!isHovered) return (
-    <Billboard position={position}>
-      <Text fontSize={0.2} color="white" anchorX="center" anchorY="middle">
-        {name}
-      </Text>
-    </Billboard>
-  );
+const ModelIndicator = ({ position, name, isHovered, modelStats, heldItem }) => {
+  // On PC: Only show indicator if hovered or holding an item
+  // On mobile: Always show indicator
+  if (!isMobile) {
+    if (!heldItem && isHovered) return null;
+    if (!isHovered) return (
+      <Billboard position={position}>
+        <Text fontSize={0.2} color="white" anchorX="center" anchorY="middle">
+          {name}
+        </Text>
+      </Billboard>
+    );
+  }
 
   const getIndicatorText = () => {
     if (!heldItem) return '';
@@ -47,4 +50,4 @@ const ModelIndicator = ({ position, name, isHovered, modelStats, heldItem }) => 
   );
 };
 
-export default ModelIndicator; 
+export default ModelIndicator;
