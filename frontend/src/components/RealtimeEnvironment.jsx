@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import { Environment, Sparkles, Sky, Clouds, ContactShadows } from "@react-three/drei";
-import { EffectComposer, Bloom, DepthOfField, GodRays, BrightnessContrast } from "@react-three/postprocessing";
 import axios from "axios";
 import RainEffect from "./RainEffect"; // <- your rain component
 import { RGBELoader } from "three-stdlib";
