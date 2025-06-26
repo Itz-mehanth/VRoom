@@ -14,6 +14,7 @@ import HeldItem from './HeldItem';
 import DropIndicator from './DropIndicator';
 import DroppedModel from './DroppedModel';
 import Garden from './Garden';
+import Dep from './Dep';
 
 const store = createXRStore();
 
@@ -167,6 +168,7 @@ export default function ARPage({
                 shadow-camera-bottom={-50}
               />
 
+              {/* <Dep/> */}
               <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} />
               {heldItem && (
                 <HeldItem

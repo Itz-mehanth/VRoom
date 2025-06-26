@@ -1,4 +1,4 @@
-import React, { Suspense, useRef, useState, useEffect } from 'react';
+import React, { Suspense, useRef, useState, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useAuth } from '../contexts/AuthContext';
 import { createPlantInstance, getAllPlantInstances } from '../services/plantService';
@@ -11,7 +11,15 @@ import HeldItem from './HeldItem';
 import DropIndicator from './DropIndicator';
 import DroppedModel from './DroppedModel';
 import Garden from './Garden';
+import Dep from './Dep';
 import { useThree } from '@react-three/fiber';
+import RealtimeEnvironment from './RealtimeEnvironment';
+import { Leva, useControls } from 'leva';
+import ProceduralTerrain from './ProceduralTerrain';
+import { geoToLocal } from '../geoUtils';
+import axios from 'axios';
+import { DateTime } from "luxon";
+
 export default function Scene({
   envPreset,
   sunPosition,
@@ -28,6 +36,7 @@ export default function Scene({
   socket,
   users,
   heldItem,
+  coords,
   dropIndicatorPosition,
   setDropIndicatorPosition,
   placedModels,
@@ -47,7 +56,13 @@ export default function Scene({
   const raycaster = new THREE.Raycaster();
   const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const { currentUser } = useAuth();
-
+  const [lat, lng] = coords || [0, 0];
+  const initXZ = coords ? geoToLocal([lat, lng], [0, 0]) : [0,0];
+  const initPosition = [
+    initXZ[0],
+     -2, // Assuming ground level is 0
+     initXZ[2]
+  ]
 
   const isPC = !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
 
@@ -254,92 +269,147 @@ export default function Scene({
     }
   };
 
-  return (
-    <Canvas
-      shadows
-      ref={canvasRef}
-      gl={{
-        antialias: true,
-        alpha: true,
-        powerPreference: 'high-performance',
-        preserveDrawingBuffer: true,
-        failIfMajorPerformanceCaveat: true,
-        logarithmicDepthBuffer: true
-      }}
-      style={{ height: '100%' }}
-      onDoubleClick={handleCanvasClick}
-    >
-      <Stats/>
-      <Environment preset={envPreset} />
-      <ambientLight intensity={0.5} />
-      <directionalLight
-        castShadow
-        position={sunPosition}
-        intensity={directionalIntensity}
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-far={100}
-        shadow-camera-left={-50}
-        shadow-camera-right={50}
-        shadow-camera-top={50}
-        shadow-camera-bottom={-50}
-      />
-      <DragHandler/>
-      <PerspectiveCamera makeDefault position={[position.x, position.y, position.z]} />
-      <Sky sunPosition={sunPosition} turbidity={skyTurbidity} />
-      <Rig
-        userName={userName}
-        socket={socket}
-        position={position}
-        setPosition={setPosition}
-        isWalking={isWalking}
-        enterAr={enterAr}
-      />
-      <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} />
-      {heldItem && (
-        <HeldItem
-          item={heldItem}
-          waterCapacity={waterJugCapacity}
-        />
-      )}
-      {users.map((user) => {
-        if (user.name === userName) return null;
-        return (
-          <Avatar
-            key={user.id}
-            position={user.position}
-            userName={user.name}
-            rotation={user.rotation}
-            isWalking={user.isWalking}
-          />
-        );
-      })}
-      <mesh
-        position={[position.x, 0, position.z]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        receiveShadow
-      >
-        <planeGeometry args={[2500, 2500]} />
-        <meshStandardMaterial color="#ffffff" />
-      </mesh>
-      <Garden scale={0.5} />
 
-      {placedModels.map((model) => (
-        <DroppedModel
-          plantId={model.plantId}
-          instanceId={model.instanceId}
-          key={model.instanceId}
-          modelPath={model.modelPath}
-          position={model.position || [0, 0, 0]}
-          name={model.name}
-          description={model.description}
-          onPositionChange={(newPosition) => handleModelPositionChange(model.id, newPosition)}
-          setSelectedModel={setSelectedModel}
-          setSelectedModelDetails={setSelectedModelDetails}
-          heldItem={heldItem}
-          feedPlant={feedPlant}
+  const levaControls = useControls('Environment', {
+    useRealtime: { label: 'Use Real-Time Weather', value: true },
+    hour: { value: 12, min: 0, max: 23, step: 1, render: (get) => !get('useRealtime') },
+    cloudiness: { value: 20, min: 0, max: 100, step: 1, render: (get) => !get('useRealtime') },
+    isRaining: { value: false, render: (get) => !get('useRealtime') },
+    isSnow: { value: false, render: (get) => !get('useRealtime') },
+    isThunder: { value: false, render: (get) => !get('useRealtime') },
+    temp: { value: 25, min: -20, max: 45, step: 1, render: (get) => !get('useRealtime') },
+   });
+
+  const [backgroundIntensity, setBackgroundIntensity] = useState(1);
+  const [zoneName, setZoneName] = useState(null);
+  const [localHour, setLocalHour] = useState(new Date().getUTCHours());
+
+  // Memoize bbox and position so they are stable references
+  const memoizedBBox = useMemo(() => [lat - 0.05, lng - 0.05, lat + 0.05, lng + 0.05], []);
+  const memoizedInitPosition = useMemo(() => initPosition, [initPosition[0], initPosition[1], initPosition[2]]);
+
+  // Timezone handling
+  useEffect(() => {
+    const fetchTimezone = async () => {
+      if (!lat || !lng) return;
+
+      try {
+        const tzRes = await axios.get('https://api.timezonedb.com/v2.1/get-time-zone', {
+          params: {
+            key: 'A57Y73285BMN',
+            format: 'json',
+            by: 'position',
+            lat,
+            lng,
+          }
+        });
+        const zoneName = tzRes.data.zoneName; // e.g. "Asia/Kolkata"
+        console.log('[DEBUG] Fetched timezone:', zoneName);
+        setZoneName(zoneName);
+        // You can now use the zoneName for any timezone-specific logic
+        const localHour = DateTime.now().setZone(zoneName).hour;
+        setLocalHour(localHour);
+      } catch (error) {
+        console.error('[DEBUG] Failed to fetch timezone:', error);
+      }
+    };
+
+    fetchTimezone();
+  }, [lat, lng]);
+
+  useEffect(() => {
+    if (zoneName) {
+      setLocalHour(DateTime.now().setZone(zoneName).hour);
+    }
+  }, [zoneName]);
+
+  return (
+    <>
+      <Leva collapsed/>
+      <Canvas
+        shadows
+        ref={canvasRef}
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: 'high-performance',
+          preserveDrawingBuffer: true,
+          failIfMajorPerformanceCaveat: true,
+          logarithmicDepthBuffer: true
+        }}
+        style={{ height: '100%' }}
+        onDoubleClick={handleCanvasClick}
+      >
+        <Stats/>
+        <RealtimeEnvironment
+          lat={lat}
+          lng={lng}
+          position={position}
+          useRealtime={levaControls.useRealtime}
+          customEnv={levaControls}
+          onBackgroundIntensityChange={setBackgroundIntensity}
+          localHour={localHour}
+          zoneName={zoneName} // <-- pass the timezone name as a prop
         />
-      ))}
-    </Canvas>
+        <DragHandler/>
+        <Sky sunPosition={sunPosition} turbidity={skyTurbidity} />
+        
+
+        
+        <PerspectiveCamera makeDefault position={[position.x, position.y, position.z]} />
+        <Rig
+          userName={userName}
+          socket={socket}
+          position={position}
+          setPosition={setPosition}
+          isWalking={isWalking}
+          enterAr={enterAr}
+        />
+
+        <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} />
+        {heldItem && (
+          <HeldItem
+            item={heldItem}
+            waterCapacity={waterJugCapacity}
+          />
+        )}
+        {users.map((user) => {
+          if (user.name === userName) return null;
+          return (
+            <Avatar
+              key={user.id}
+              position={user.position}
+              userName={user.name}
+              rotation={user.rotation}
+              isWalking={user.isWalking}
+            />
+          );
+        })}
+        
+        <ProceduralTerrain
+          bbox={memoizedBBox}
+          position={memoizedInitPosition}
+          envIntensity={backgroundIntensity}
+        />
+        <Garden scale={0.5} />
+
+        {placedModels.map((model) => (
+          <DroppedModel
+            plantId={model.plantId}
+            instanceId={model.instanceId}
+            key={model.instanceId}
+            modelPath={model.modelPath}
+            position={model.position || [0, 0, 0]}
+            name={model.name}
+            description={model.description}
+            onPositionChange={(newPosition) => handleModelPositionChange(model.id, newPosition)}
+            setSelectedModel={setSelectedModel}
+            setSelectedModelDetails={setSelectedModelDetails}
+            heldItem={heldItem}
+            feedPlant={feedPlant}
+          />
+        ))}
+      </Canvas>
+    </>
   );
 }

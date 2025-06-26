@@ -2,21 +2,8 @@ import React from 'react';
 import LabelBillboard from './LabelBillboard';
 import { Billboard, Text } from '@react-three/drei';
 
-const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-
 const ModelIndicator = ({ position, name, isHovered, modelStats, heldItem }) => {
-  // On PC: Only show indicator if hovered or holding an item
-  // On mobile: Always show indicator
-  if (!isMobile) {
-    if (!heldItem && isHovered) return null;
-    if (!isHovered) return (
-      <Billboard position={position}>
-        <Text fontSize={0.2} color="white" anchorX="center" anchorY="middle">
-          {name}
-        </Text>
-      </Billboard>
-    );
-  }
+  // Always show indicator, regardless of device or hover state
 
   const getIndicatorText = () => {
     if (!heldItem) return '';

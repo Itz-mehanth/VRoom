@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signInWithGoogle, signOutUser } from './Firebase';
 import { useAuth } from './contexts/AuthContext';
 import './Home.css';
-import { MapContainer, TileLayer, useMapEvents, Marker } from "react-leaflet";
+import { MapContainer, TileLayer, useMapEvents, Marker, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import * as L from "leaflet";
 import { getAllPlantInstances } from './services/plantService';
@@ -18,6 +18,16 @@ function MapClickHandler({ setCoords }) {
   return null;
 }
 
+function ZoomToUser({ userCoords, trigger }) {
+  const map = useMap();
+  useEffect(() => {
+    if (trigger && userCoords) {
+      map.setView(userCoords, 20);
+    }
+  }, [trigger, userCoords, map]);
+  return null;
+}
+
 const Home = () => {
   const [roomId, setRoomId] = useState('');
   const [selectedCoords, setSelectedCoords] = useState(null);
@@ -25,6 +35,8 @@ const Home = () => {
   const [userCoords, setUserCoords] = useState(null);
   const { currentUser } = useAuth();
   const [plantMarkers, setPlantMarkers] = useState([]);
+  const mapRef = useRef();
+  const [zoomTrigger, setZoomTrigger] = useState(false);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -84,6 +96,10 @@ const Home = () => {
     }
   };
 
+  const handleZoomToUser = () => {
+    setZoomTrigger(t => !t); // Toggle to trigger useEffect in ZoomToUser
+  };
+
   // Emoji icons for markers
   const userEmojiIcon = L.divIcon({
     className: '',
@@ -111,7 +127,12 @@ const Home = () => {
     <div className="home-container">
       <div className="home-card">
         <h1 className="home-title">VR Room</h1>
-         <MapContainer center={[20, 0]} zoom={2} style={{ height: "35vh" }}>
+        <MapContainer
+          center={[20, 0]}
+          zoom={2}
+          style={{ height: "35vh" }}
+          whenCreated={mapInstance => { mapRef.current = mapInstance; }}
+        >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <MapClickHandler setCoords={setSelectedCoords} />
           {userCoords && <Marker icon={userEmojiIcon} position={userCoords} />}
@@ -123,7 +144,15 @@ const Home = () => {
             const [lat, lng] = localToGeo([x, z], origin);
             return <Marker key={model.instanceId || idx} icon={plantEmojiIcon(lat, lng)} position={[lat, lng]} />;
           })}
+          <ZoomToUser userCoords={userCoords} trigger={zoomTrigger} />
         </MapContainer>
+        <button
+          onClick={handleZoomToUser}
+          disabled={!userCoords}
+          style={{ marginTop: 10 }}
+        >
+          Zoom to My Location
+        </button>
         {!currentUser ? (
           <button
             onClick={handleSignIn}

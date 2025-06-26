@@ -820,8 +820,8 @@ const ChatMessage = ({ message, currentUserId }) => {
         )}
         <div style={{ 
           position: 'fixed',
-          top: 0,
-          right: 0,  
+          top: 50,
+          left: 120,  
           height: '100%',
           pointerEvents: 'none'
         }}>

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
-import { PointerLockControls, OrbitControls } from '@react-three/drei';
+import { PointerLockControls, OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import * as THREE from 'three';
 
 const isPC = !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
@@ -33,7 +33,7 @@ export default function Rig({ userName, socket, position, setPosition, isWalking
     const now = Date.now();
     const shouldUpdate = socket && now - lastUpdateRef.current >= UPDATE_INTERVAL;
     if (isWalking && !isColliding) {
-      const speed = 2;
+      const speed = 5;
       const forward = new THREE.Vector3(0, 0, -1);
       forward.applyQuaternion(camera.quaternion);
       forward.y = 0; // Prevent vertical movement
@@ -49,10 +49,10 @@ export default function Rig({ userName, socket, position, setPosition, isWalking
         };
         rigRef.current.position.x = newPosition.x;
         rigRef.current.position.z = newPosition.z;
-        if (isPC && !enterAr) {
-          cameraTargetRef.current.set(newPosition.x, newPosition.y, newPosition.z);
-          camera.position.lerp(cameraTargetRef.current, 0.1);
-        }
+        // if (isPC && !enterAr) {
+        //   // cameraTargetRef.current.set(newPosition.x, newPosition.y, newPosition.z);
+        //   camera.position.set(newPosition.x, newPosition.y, newPosition.z);
+        // }
         setPosition(newPosition);
         if (shouldUpdate) {
           const newRotation = {
