@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from "react";
 import * as THREE from "three";
 import axios from "axios";
-import { useLoader } from "@react-three/fiber";
+import { useFrame, useLoader } from "@react-three/fiber";
 
 const OPENTOPO_API_KEY = "15b04da138efd60cff47b10dae0afb4b"; // <-- Replace with your key
 
@@ -21,6 +21,7 @@ export default function ProceduralTerrain({
   const colorMap = useLoader(THREE.TextureLoader, textureUrl);
   const displacementMap = useLoader(THREE.TextureLoader, "/textures/soil_disp.png");
 
+
   // Repeat/wrap the texture so it tiles instead of stretching
   React.useEffect(() => {
     if (colorMap) {
@@ -34,6 +35,7 @@ export default function ProceduralTerrain({
       displacementMap.needsUpdate = true;
     }
   }, [colorMap, displacementMap]);
+
 
   useEffect(() => {
     console.log("terrain is at: ", position);
@@ -104,7 +106,7 @@ export default function ProceduralTerrain({
   const memoizedInitPosition = useMemo(() => position, [position[0], position[1], position[2]]);
 
   return (
-    <mesh geometry={geometry} position={memoizedInitPosition} rotation={[-Math.PI / 2, 0, 0]}>
+    <mesh geometry={geometry} position={memoizedInitPosition} rotation={[-Math.PI/2, 0, 0]}>
       <meshStandardMaterial
         envMapIntensity={envIntensity ?? 1}
         // color={demFailed ? "#c28072" : "yellow"}

@@ -9,6 +9,107 @@ import * as L from "leaflet";
 import { getAllPlantInstances } from './services/plantService';
 import { localToGeo } from './geoUtils';
 
+function AddressSearch({ onLocationSelect }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch recommendations as user types
+  useEffect(() => {
+    if (!query) {
+      setResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    setLoading(true);
+    const timeout = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`
+        );
+        const data = await response.json();
+        setResults(data);
+        setShowDropdown(true);
+      } catch (err) {
+        setResults([]);
+        setShowDropdown(false);
+      }
+      setLoading(false);
+    }, 400); // debounce
+    return () => clearTimeout(timeout);
+  }, [query]);
+
+  const handleSelect = (lat, lon) => {
+    onLocationSelect([parseFloat(lat), parseFloat(lon)]);
+    setShowDropdown(false);
+    setQuery(""); // Optionally clear input
+  };
+
+  return (
+    <div style={{ position: "relative", marginBottom: "1rem", zIndex: 100 }}>
+      <input
+        type="text"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Search for a location"
+        style={{
+          width: "100%",
+          padding: "0.5rem 1rem",
+          borderRadius: "6px",
+          border: "1px solid #ccc",
+          fontSize: "1rem",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.04)"
+        }}
+        onFocus={() => setShowDropdown(results.length > 0)}
+        autoComplete="off"
+      />
+      {loading && (
+        <div style={{ position: "absolute", right: 10, top: 10 }}>
+          <span style={{ fontSize: 12, color: "#888" }}>Loading...</span>
+        </div>
+      )}
+      {showDropdown && results.length > 0 && (
+        <ul
+          style={{
+            position: "absolute",
+            zIndex: 10,
+            left: 0,
+            right: 0,
+            background: "#fff",
+            border: "1px solid #eee",
+            borderRadius: "0 0 6px 6px",
+            margin: 0,
+            padding: 0,
+            listStyle: "none",
+            maxHeight: 180,
+            overflowY: "auto",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.08)"
+          }}
+        >
+          {results.map((result, idx) => (
+            <li
+              key={idx}
+              onClick={() => handleSelect(result.lat, result.lon)}
+              style={{
+                padding: "0.7rem 1rem",
+                cursor: "pointer",
+                borderBottom: idx !== results.length - 1 ? "1px solid #f0f0f0" : "none",
+                background: "#fff",
+                color: 'black',
+                transition: "background 0.2s"
+              }}
+              onMouseDown={e => e.preventDefault()} // Prevent input blur
+            >
+              {result.display_name}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function MapClickHandler({ setCoords }) {
   useMapEvents({
     click(e) {
@@ -31,12 +132,12 @@ function ZoomToUser({ userCoords, trigger }) {
 const Home = () => {
   const [roomId, setRoomId] = useState('');
   const [selectedCoords, setSelectedCoords] = useState(null);
-  const navigate = useNavigate();
   const [userCoords, setUserCoords] = useState(null);
   const { currentUser } = useAuth();
   const [plantMarkers, setPlantMarkers] = useState([]);
   const mapRef = useRef();
   const [zoomTrigger, setZoomTrigger] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -75,7 +176,19 @@ const Home = () => {
     if (selectedCoords) {
       url += `?lat=${selectedCoords[0]}&lng=${selectedCoords[1]}`;
     }
-    navigate(url);
+
+    async function fetchGeocode() {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${selectedCoords[0]}&lon=${selectedCoords[1]}`);
+      const data = await res.json();
+      alert(`fetching location details`);
+      if (data.error) {
+        console.error("Geocode API error:", data.error);
+        alert('Failed to fetch location details');
+      } else {
+        navigate(url);
+      }
+    }
+    fetchGeocode();
   };
 
   const handleSignIn = async () => {
@@ -126,26 +239,28 @@ const Home = () => {
   return (
     <div className="home-container">
       <div className="home-card">
-        <h1 className="home-title">VR Room</h1>
-        <MapContainer
-          center={[20, 0]}
-          zoom={2}
-          style={{ height: "35vh" }}
-          whenCreated={mapInstance => { mapRef.current = mapInstance; }}
-        >
-          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <MapClickHandler setCoords={setSelectedCoords} />
-          {userCoords && <Marker icon={userEmojiIcon} position={userCoords} />}
-          {selectedCoords && <Marker icon={selectedEmojiIcon} position={selectedCoords} />}
-          {plantMarkers && plantMarkers.map((model, idx) => {
-            if (!model.position) return null;
-            const origin = [0, 0];
-            const [x, , z] = model.position;
-            const [lat, lng] = localToGeo([x, z], origin);
-            return <Marker key={model.instanceId || idx} icon={plantEmojiIcon(lat, lng)} position={[lat, lng]} />;
-          })}
-          <ZoomToUser userCoords={userCoords} trigger={zoomTrigger} />
-        </MapContainer>
+        <div style={{ position: "relative" }}>
+          <AddressSearch onLocationSelect={setSelectedCoords} />
+          <MapContainer
+            center={[20, 0]}
+            zoom={2}
+            style={{ height: "35vh", zIndex: 1 }}
+            whenCreated={mapInstance => { mapRef.current = mapInstance; }}
+          >
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <MapClickHandler setCoords={setSelectedCoords} />
+            {userCoords && <Marker icon={userEmojiIcon} position={userCoords} />}
+            {selectedCoords && <Marker icon={selectedEmojiIcon} position={selectedCoords} />}
+            {plantMarkers && plantMarkers.map((model, idx) => {
+              if (!model.position) return null;
+              const origin = [0, 0];
+              const [x, , z] = model.position;
+              const [lat, lng] = localToGeo([x, z], origin);
+              return <Marker key={model.instanceId || idx} icon={plantEmojiIcon(lat, lng)} position={[lat, lng]} />;
+            })}
+            <ZoomToUser userCoords={userCoords} trigger={zoomTrigger} />
+          </MapContainer>
+        </div>
         <button
           onClick={handleZoomToUser}
           disabled={!userCoords}

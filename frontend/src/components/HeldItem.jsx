@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useLoader } from '@react-three/fiber';
 import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -29,17 +29,18 @@ export default function HeldItem({ item, onPlace, waterCapacity = 0 }) {
 
     // Position the item in front of the camera
     const distance = 2;
+
     const targetPosition = new THREE.Vector3(
       camera.position.x + direction.x * distance,
       camera.position.y + direction.y * distance - 0.5, // Slightly lower than camera
       camera.position.z + direction.z * distance
     );
-    
+
     // Update model position
     modelRef.current.position.copy(targetPosition);
-    
+
     // Make the model face the same direction as the camera
-    modelRef.current.rotation.y = camera.rotation.y;
+    modelRef.current.quaternion.copy(camera.quaternion);
   });
 
   // Handle click events for placing the item
@@ -55,12 +56,33 @@ export default function HeldItem({ item, onPlace, waterCapacity = 0 }) {
     }
   };
 
+  useEffect(() => {
+   console.log('held item: ', item);
+  },[])
+
   // Only render if we have a valid model path and the model has loaded
   if (!modelPath || !gltf) return null;
 
   return (
     <group ref={modelRef} onClick={handleClick}>
-      <primitive object={gltf.scene} />
+
+      {item.id === 'torch' && (
+        <>
+          <primitive rotation={[Math.PI, 0, 0]} object={gltf.scene} />
+          <pointLight
+            position={[0, 1.7, -2]} // at the torch
+            intensity={10}
+            distance={50}
+            decay={0.5}
+            target={modelRef.current}
+            color={0xffa500} // orange color for torch light
+          />
+        </>
+      )}
+
+      {item.id !== 'torch' && (
+        <primitive object={gltf.scene} />
+      )}
     </group>
   );
-} 
+}

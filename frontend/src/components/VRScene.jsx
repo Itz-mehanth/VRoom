@@ -26,6 +26,7 @@ import { ModelRegistry, ModelContext } from '../contexts/ModelRegistry';
 import Scene from './Scene';
 import VRUI from './VRUI';
 import ARPage from './ARPage';
+import { useNavigate } from 'react-router-dom';
 
 function WorldMap({coords, placedModels = [], userMarkerPosition = null, peers = []}) {
   // Fallback center if coords is not valid

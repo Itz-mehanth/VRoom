@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DateTime } from "luxon";
+import { useNavigate } from "react-router-dom";
 import WalkingIndicator from './WalkingIndicator';
 import ModelList from './ModelList';
 import WorldMap from './WorldMap';
@@ -38,6 +39,7 @@ export default function VRUI({
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [weatherDetails, setWeatherDetails] = useState(null);
   const [timezoneName, setTimezoneName] = useState(null);
+  const navigate = useNavigate();
 
   // Helper: convert x/z to lat/lng if needed (assume coords is [lat, lng] if available)
   const getLatLng = () => {
@@ -59,6 +61,8 @@ export default function VRUI({
       const data = await res.json();
       if (data.error) {
         console.error("Geocode API error:", data.error);
+        navigate("/"); // Redirect to home if geocode fails
+        return;
       }
       setLocationDetails(data);
 

@@ -5,7 +5,7 @@ import React, { useRef, useMemo } from "react";
 const RAIN_COUNT = 1000;
 const AREA_SIZE = 20;
 const RAIN_HEIGHT = 15;
-const RAIN_BOTTOM = -10;
+const RAIN_BOTTOM = -15;
 const RAIN_SPEED = 0.45; // Higher = faster
 
 export default function RainEffect({ position = [0, 5, 0] }) {

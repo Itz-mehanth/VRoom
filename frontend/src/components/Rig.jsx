@@ -11,7 +11,6 @@ export default function Rig({ userName, socket, position, setPosition, isWalking
   const { camera } = useThree();
   const lastUpdateRef = useRef(Date.now());
   const UPDATE_INTERVAL = 500;
-  const cameraTargetRef = useRef(new THREE.Vector3());
   const [isColliding, setIsColliding] = useState(false);
 
   useEffect(() => {
@@ -49,10 +48,7 @@ export default function Rig({ userName, socket, position, setPosition, isWalking
         };
         rigRef.current.position.x = newPosition.x;
         rigRef.current.position.z = newPosition.z;
-        // if (isPC && !enterAr) {
-        //   // cameraTargetRef.current.set(newPosition.x, newPosition.y, newPosition.z);
-        //   camera.position.set(newPosition.x, newPosition.y, newPosition.z);
-        // }
+
         setPosition(newPosition);
         if (shouldUpdate) {
           const newRotation = {
