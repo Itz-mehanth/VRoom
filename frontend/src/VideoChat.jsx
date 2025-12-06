@@ -284,7 +284,9 @@ const VideoChat = ({
         const socket = io(backendUrl, {
           secure: isProd,
           rejectUnauthorized: false,
-          transports: ['websocket', 'polling']
+          transports: ['polling'], // Force polling only - WebSocket fails on Render
+          reconnectionDelayMax: 10000,
+          reconnectionAttempts: 5
         });
         socketRef.current = socket;
         setSocket(socket);
