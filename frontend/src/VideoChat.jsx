@@ -270,19 +270,36 @@ const VideoChat = ({
         myStream = stream;
         setLocalStream(stream);
 
-        const isProd = false; // Set to true for production URL logic if needed
-        const hostname = window.location.hostname;
-        const url = isProd ? 'https://vrroom-x6vw.onrender.com' : `http://${hostname}:3001`;
+        // Auto-detect production: if page is HTTPS or on netlify/render domain
+        const isProd = window.location.protocol === 'https:' ||
+          window.location.hostname.includes('netlify.app') ||
+          window.location.hostname.includes('onrender.com');
 
-        const socket = io(url, { secure: isProd, rejectUnauthorized: false });
+        const hostname = window.location.hostname;
+        const backendUrl = isProd ? 'https://vrroom-x6vw.onrender.com' : `http://${hostname}:3001`;
+
+        console.log('[VideoChat] Environment:', isProd ? 'Production' : 'Development');
+        console.log('[VideoChat] Backend URL:', backendUrl);
+
+        const socket = io(backendUrl, {
+          secure: isProd,
+          rejectUnauthorized: false,
+          transports: ['websocket', 'polling']
+        });
         socketRef.current = socket;
         setSocket(socket);
 
         const peer = new Peer(undefined, {
           host: isProd ? 'vrroom-x6vw.onrender.com' : hostname,
-          port: isProd ? '443' : '3001',
+          port: isProd ? 443 : 3001,
           path: '/peerjs',
-          secure: isProd
+          secure: isProd,
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+          }
         });
         peerInstanceRef.current = peer;
 
