@@ -5,13 +5,15 @@ import { createPlantInstance, getAllPlantInstances } from '../services/plantServ
 import Avatar from './Avatar';
 import { Canvas } from '@react-three/fiber';
 import { Environment, Sky, PerspectiveCamera, Stats } from '@react-three/drei';
-import Rig from './Rig';
+import FirstPersonController from './FirstPersonController';
+import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
+import { Joystick } from "react-joystick-component";
+import { MathUtils } from 'three';
 import PlantBot from './PlantBot';
 import HeldItem from './HeldItem';
 import DropIndicator from './DropIndicator';
 import DroppedModel from './DroppedModel';
 import Garden from './Garden';
-import Dep from './Dep';
 import { useThree } from '@react-three/fiber';
 import RealtimeEnvironment from './RealtimeEnvironment';
 import { Leva, useControls } from 'leva';
@@ -20,11 +22,158 @@ import { geoToLocal } from '../geoUtils';
 import axios from 'axios';
 import { DateTime } from "luxon";
 
+// Define raycaster and ground plane once to avoid re-creation on renders
+const raycaster = new THREE.Raycaster();
+const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+
+/**
+ * A component to handle drag-and-drop operations onto the 3D canvas.
+ */
+export const DragHandler = ({
+  draggedModel,
+  setDraggedModel,
+  setPlacedModels,
+  setDropIndicatorPosition,
+  canvasRef,
+  currentUser,
+}) => {
+  const { camera } = useThree();
+
+  useEffect(() => {
+    const canvasElement = canvasRef.current;
+    // Exit if the canvas isn't ready or if nothing is being dragged
+    if (!canvasElement || !draggedModel) {
+      // Ensure the indicator is hidden when not dragging
+      if (setDropIndicatorPosition) setDropIndicatorPosition(null);
+      return;
+    }
+
+    // --- Event Handler for Dragging Over the Canvas ---
+    const handleDragOver = (e) => {
+      e.preventDefault(); // Necessary to allow dropping
+
+      // Get mouse/touch position relative to the canvas
+      const rect = canvasElement.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+      // Convert screen coordinates to normalized device coordinates (-1 to +1)
+      const mouse = new THREE.Vector2(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1
+      );
+
+      // Update the raycaster with the camera and mouse position
+      raycaster.setFromCamera(mouse, camera);
+
+      // Calculate the intersection point with the ground plane
+      const intersectionPoint = new THREE.Vector3();
+      raycaster.ray.intersectPlane(groundPlane, intersectionPoint);
+
+      // Update the position of the visual drop indicator
+      if (setDropIndicatorPosition) {
+        setDropIndicatorPosition([intersectionPoint.x, 0, intersectionPoint.z]);
+      }
+    };
+
+    // --- Event Handler for When the Drag Leaves the Canvas ---
+    const handleDragLeave = () => {
+      if (setDropIndicatorPosition) {
+        setDropIndicatorPosition(null);
+      }
+    };
+
+    // --- Event Handler for the Drop Action ---
+    const handleDrop = async (e) => {
+      e.preventDefault();
+      if (!draggedModel) return;
+
+      // To ensure accuracy, we recalculate the drop position on the final event
+      const rect = canvasElement.getBoundingClientRect();
+      const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+      const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+      const mouse = new THREE.Vector2(
+        ((clientX - rect.left) / rect.width) * 2 - 1,
+        -((clientY - rect.top) / rect.height) * 2 + 1
+      );
+      raycaster.setFromCamera(mouse, camera);
+      const finalDropPosition = new THREE.Vector3();
+      raycaster.ray.intersectPlane(groundPlane, finalDropPosition);
+      const dropPositionArray = [finalDropPosition.x, 0, finalDropPosition.z];
+
+      // Logic to handle planting a plant model
+      if (draggedModel.type === 'plant') {
+        try {
+          const instance = await createPlantInstance({
+            plantId: draggedModel.id,
+            position: dropPositionArray,
+            stage: draggedModel.stages?.[0]?.id || 'seed',
+            water: 0,
+            nutrients: {},
+            userEmail: currentUser?.email || 'unknown',
+            modelPath: draggedModel.modelPath || 'default/path.glb',
+          });
+
+          if (setPlacedModels) {
+            setPlacedModels(prev => [
+              ...prev,
+              {
+                ...draggedModel,
+                position: dropPositionArray,
+                id: instance.id, // Use the real ID from Firestore
+                instanceId: instance.id,
+                plantId: draggedModel.id,
+              }
+            ]);
+          }
+        } catch (error) {
+          console.error('[DragHandler] Failed to plant:', error);
+          alert('Failed to plant: ' + error.message);
+        }
+      } else {
+        // Logic to handle dropping other asset types
+        if (setPlacedModels) {
+          setPlacedModels(prev => [
+            ...prev,
+            {
+              ...draggedModel,
+              position: dropPositionArray,
+              id: `${draggedModel.id}-${Date.now()}` // Create a temporary unique ID
+            }
+          ]);
+        }
+      }
+
+      // Reset drag-related states
+      if (setDraggedModel) setDraggedModel(null);
+      if (setDropIndicatorPosition) setDropIndicatorPosition(null);
+    };
+
+    // --- Add Event Listeners ---
+    // We listen for both mouse and touch events for broad compatibility
+    canvasElement.addEventListener('dragover', handleDragOver);
+    canvasElement.addEventListener('touchmove', handleDragOver, { passive: false });
+    canvasElement.addEventListener('dragleave', handleDragLeave);
+    canvasElement.addEventListener('drop', handleDrop);
+    canvasElement.addEventListener('touchend', handleDrop); // Use touchend for the drop action on touch devices
+
+    // --- Cleanup Function ---
+    // This runs when the component unmounts or dependencies change
+    return () => {
+      canvasElement.removeEventListener('dragover', handleDragOver);
+      canvasElement.removeEventListener('touchmove', handleDragOver);
+      canvasElement.removeEventListener('dragleave', handleDragLeave);
+      canvasElement.removeEventListener('drop', handleDrop);
+      canvasElement.removeEventListener('touchend', handleDrop);
+    };
+  }, [camera, draggedModel, canvasRef, currentUser, setDraggedModel, setDropIndicatorPosition, setPlacedModels]); // Dependencies for the effect
+
+  return null; // This component does not render any visible elements
+};
+
 export default function Scene({
-  envPreset,
   sunPosition,
   skyTurbidity,
-  directionalIntensity,
   position,
   setPosition,
   isWalking,
@@ -57,14 +206,48 @@ export default function Scene({
   const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const { currentUser } = useAuth();
   const [lat, lng] = coords || [0, 0];
-  const initXZ = coords ? geoToLocal([lat, lng], [0, 0]) : [0,0];
+  const initXZ = coords ? geoToLocal([lat, lng], [0, 0]) : [0, 0];
   const initPosition = [
     initXZ[0],
-     -2, // Assuming ground level is 0
-     initXZ[2]
+    -2, // Assuming ground level is 0
+    initXZ[2]
   ]
 
-  const isPC = !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  const checkMobile = () => /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 1024;
+
+  const [isMobile, setIsMobile] = useState(checkMobile());
+  const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(checkMobile());
+      setIsLandscape(window.innerWidth > window.innerHeight);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const [isFirstPerson, setIsFirstPerson] = useState(true); // Default to 1st person
+  const joystickDataRef = useRef({ x: 0, y: 0 });
+  const controllerRef = useRef(); // Ref for FirstPersonController
+
+  const handleJoystickMove = (e) => {
+    joystickDataRef.current = {
+      x: e.x,
+      y: e.y
+    };
+  };
+
+  const handleJoystickStop = () => {
+    joystickDataRef.current = { x: 0, y: 0 };
+  };
+
+  // Handle 'toggleView' event
+  useEffect(() => {
+    const handleToggle = () => setIsFirstPerson(prev => !prev);
+    window.addEventListener('toggleView', handleToggle);
+    return () => window.removeEventListener('toggleView', handleToggle);
+  }, []);
 
   // Keep usersRef updated
   useEffect(() => {
@@ -105,7 +288,7 @@ export default function Scene({
 
   // PC: W key toggle walking
   useEffect(() => {
-    if (!isPC) return;
+    if (isMobile) return;
 
     const handleKeyDown = (e) => {
       if (e.key === 'w' && isPointerLocked) {
@@ -117,112 +300,8 @@ export default function Scene({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isPC, isPointerLocked]);
+  }, [isMobile, isPointerLocked]);
 
-  // Create a component to handle drag operations with access to the camera
-  const DragHandler = () => {
-    const { camera } = useThree();
-
-    useEffect(() => {
-      const handleDragOver = (e) => {
-        e.preventDefault();
-        if (!canvasRef.current) return;
-
-        const rect = canvasRef.current.getBoundingClientRect();
-        // Get coordinates from either mouse or touch event
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-        const mouse = new THREE.Vector2(
-          ((clientX - rect.left) / rect.width) * 2 - 1,
-          -((clientY - rect.top) / rect.height) * 2 + 1
-        );
-
-        raycaster.setFromCamera(mouse, camera);
-        const intersectionPoint = new THREE.Vector3();
-        raycaster.ray.intersectPlane(groundPlane, intersectionPoint);
-
-        setDropIndicatorPosition([intersectionPoint.x, 0, intersectionPoint.z]);
-      };
-
-      const handleDragLeave = () => {
-        setDropIndicatorPosition(null);
-      };
-
-      const handleDrop = async (e) => {
-        e.preventDefault();
-        if (!draggedModel || !dropIndicatorPosition) return;
-
-        if (draggedModel.type === 'plant') {
-          try {
-            console.log('[DEBUG] Drag-drop: Attempting to add plant to Firestore:', {
-              plantId: draggedModel.id,
-              position: dropIndicatorPosition,
-              stage: draggedModel.stages?.[0]?.id || 'seed',
-              water: 0,
-              nutrients: {},
-              userEmail: currentUser?.email || 'unknown',
-              modelPath: draggedModel.modelPath,
-            });
-            const instance = await createPlantInstance({
-              plantId: draggedModel.id,
-              position: dropIndicatorPosition,
-              stage: draggedModel.stages?.[0]?.id || 'seed',
-              water: 0,
-              nutrients: {},
-              userEmail: currentUser?.email || 'unknown',
-              modelPath: 'hi',
-            });
-            console.log('[DEBUG] Drag-drop: Plant added to Firestore with id:', instance.id, instance);
-            setPlacedModels(prev => [
-              ...prev,
-              {
-                ...draggedModel,
-                position: dropIndicatorPosition,
-                id: instance.id,
-                plantId: draggedModel.id, // Store plantId for future reference
-              }
-            ]);
-          } catch (e) {
-            console.error('[DEBUG] Drag-drop: Failed to plant:', e);
-            alert('Failed to plant: ' + e.message);
-          }
-        } else {
-          setPlacedModels(prev => [
-            ...prev,
-            {
-              ...draggedModel,
-              position: dropIndicatorPosition,
-              id: `${draggedModel.id}-${Date.now()}`
-            }
-          ]);
-        }
-
-        setDraggedModel(null);
-        setDropIndicatorPosition(null);
-      };
-
-      // Add event listeners for both mouse and touch events
-      const canvas = canvasRef.current;
-      canvas.addEventListener('dragover', handleDragOver);
-      canvas.addEventListener('touchmove', handleDragOver, { passive: true });
-      canvas.addEventListener('dragleave', handleDragLeave);
-      canvas.addEventListener('touchend', handleDragLeave);
-      canvas.addEventListener('drop', handleDrop);
-      canvas.addEventListener('touchend', handleDrop);
-
-      return () => {
-        canvas.removeEventListener('dragover', handleDragOver);
-        canvas.removeEventListener('touchmove', handleDragOver);
-        canvas.removeEventListener('dragleave', handleDragLeave);
-        canvas.removeEventListener('touchend', handleDragLeave);
-        canvas.removeEventListener('drop', handleDrop);
-        canvas.removeEventListener('touchend', handleDrop);
-      };
-    }, [camera, draggedModel]);
-
-    return null;
-  };
 
   useEffect(() => {
     // 1. Load plant catalog at startup
@@ -278,7 +357,7 @@ export default function Scene({
     isSnow: { value: false, render: (get) => !get('useRealtime') },
     isThunder: { value: false, render: (get) => !get('useRealtime') },
     temp: { value: 25, min: -20, max: 45, step: 1, render: (get) => !get('useRealtime') },
-   });
+  });
 
   const [backgroundIntensity, setBackgroundIntensity] = useState(1);
   const [zoneName, setZoneName] = useState(null);
@@ -325,7 +404,7 @@ export default function Scene({
 
   return (
     <>
-      <Leva collapsed/>
+      <Leva hidden />
       <Canvas
         shadows
         ref={canvasRef}
@@ -340,7 +419,7 @@ export default function Scene({
         style={{ height: '100%' }}
         onDoubleClick={handleCanvasClick}
       >
-        <Stats/>
+        <Stats />
         <RealtimeEnvironment
           lat={lat}
           lng={lng}
@@ -351,65 +430,93 @@ export default function Scene({
           localHour={localHour}
           zoneName={zoneName} // <-- pass the timezone name as a prop
         />
-        <DragHandler/>
+        <DragHandler
+          draggedModel={draggedModel}
+          canvasRef={canvasRef}
+        />
         <Sky sunPosition={sunPosition} turbidity={skyTurbidity} />
-        
 
-        
-        <PerspectiveCamera makeDefault position={[position.x, position.y, position.z]} />
-        <Rig
-          userName={userName}
-          socket={socket}
-          position={position}
-          setPosition={setPosition}
-          isWalking={isWalking}
-          enterAr={enterAr}
-        />
 
-        <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} />
-        {heldItem && (
-          <HeldItem
-            item={heldItem}
-            waterCapacity={waterJugCapacity}
+
+        <Physics gravity={[0, -9.81, 0]}>
+          <FirstPersonController
+            ref={controllerRef}
+            startPosition={[position.x, position.y + 5, position.z]} // Start slightly higher to avoid floor clip
+            socket={socket}
+            userName={userName}
+            isMobile={isMobile}
+            isFirstPerson={isFirstPerson}
+            aimActiveRef={{ current: false }} // Stub
+            joystickDataRef={joystickDataRef}
+            isMenuOpen={false}
           />
-        )}
-        {users.map((user) => {
-          if (user.name === userName) return null;
-          return (
-            <Avatar
-              key={user.id}
-              position={user.position}
-              userName={user.name}
-              rotation={user.rotation}
-              isWalking={user.isWalking}
+
+          <CuboidCollider args={[1000, 1, 1000]} position={[0, -3, 0]} /> {/* Invisible Floor */}
+
+          <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} />
+          {heldItem && (
+            <HeldItem
+              item={heldItem}
+              waterCapacity={waterJugCapacity}
             />
-          );
-        })}
-        
-        <ProceduralTerrain
-          bbox={memoizedBBox}
-          position={memoizedInitPosition}
-          envIntensity={backgroundIntensity}
-        />
-        <Garden scale={0.5} />
+          )}
+          {users.map((user) => {
+            if (user.name === userName) return null;
+            return (
+              <Avatar
+                key={user.id}
+                position={user.position}
+                userName={user.name}
+                rotation={user.rotation}
+                isWalking={user.isWalking}
+              />
+            );
+          })}
 
-        {placedModels.map((model) => (
-          <DroppedModel
-            plantId={model.plantId}
-            instanceId={model.instanceId}
-            key={model.instanceId}
-            modelPath={model.modelPath}
-            position={model.position || [0, 0, 0]}
-            name={model.name}
-            description={model.description}
-            onPositionChange={(newPosition) => handleModelPositionChange(model.id, newPosition)}
-            setSelectedModel={setSelectedModel}
-            setSelectedModelDetails={setSelectedModelDetails}
-            heldItem={heldItem}
-            feedPlant={feedPlant}
+          <ProceduralTerrain
+            bbox={memoizedBBox}
+            position={memoizedInitPosition}
+            envIntensity={backgroundIntensity}
           />
-        ))}
+          <Garden scale={0.5} />
+
+          {placedModels.map((model) => (
+            <DroppedModel
+              plantId={model.plantId}
+              instanceId={model.instanceId}
+              key={model.instanceId}
+              modelPath={model.modelPath}
+              position={model.position || [0, 0, 0]}
+              name={model.name}
+              description={model.description}
+              onPositionChange={(newPosition) => handleModelPositionChange(model.id, newPosition)}
+              setSelectedModel={setSelectedModel}
+              setSelectedModelDetails={setSelectedModelDetails}
+              heldItem={heldItem}
+              feedPlant={feedPlant}
+            />
+          ))}
+        </Physics>
       </Canvas>
+      {isMobile && (
+        <div style={{
+          position: 'absolute',
+          bottom: isLandscape ? '40px' : '160px',
+          left: '40px',
+          zIndex: 2000,
+          pointerEvents: 'auto'
+        }}>
+          <Joystick
+            size={100}
+            sticky={false}
+            baseColor="rgba(255, 255, 255, 0.1)"
+            stickColor="rgba(255, 255, 255, 0.3)"
+            move={handleJoystickMove}
+            stop={handleJoystickStop}
+          />
+        </div>
+      )}
+
     </>
   );
 }

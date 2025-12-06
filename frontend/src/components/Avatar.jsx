@@ -30,51 +30,51 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
 
   const currentRotation = useRef(rotation?.y || 0)
 
-  // Load and setup walking animation
-  useEffect(() => {
-    const loader = new FBXLoader()
-    loader.load('/animations/Walking-InPlace.fbx', (fbx) => {
-      if (group.current) {
-        const animation = fbx.animations[0]
-        mixer.current = new THREE.AnimationMixer(group.current)
-        walkingAction.current = mixer.current.clipAction(animation)
-        walkingAction.current.setEffectiveTimeScale(1)
-        walkingAction.current.setEffectiveWeight(1)
-        walkingAction.current.clampWhenFinished = true
-      }
-    })
+  // // Load and setup walking animation
+  // useEffect(() => {
+  //   const loader = new FBXLoader()
+  //   loader.load('/animations/Walking-InPlace.fbx', (fbx) => {
+  //     if (group.current) {
+  //       const animation = fbx.animations[0]
+  //       mixer.current = new THREE.AnimationMixer(group.current)
+  //       walkingAction.current = mixer.current.clipAction(animation)
+  //       walkingAction.current.setEffectiveTimeScale(1)
+  //       walkingAction.current.setEffectiveWeight(1)
+  //       walkingAction.current.clampWhenFinished = true
+  //     }
+  //   })
 
-    loader.load('/animations/Breathing Idle.fbx', (fbx) => {
-      if (group.current) {
-        const animation = fbx.animations[0]
-        idleAction.current = mixer.current.clipAction(animation)
-        idleAction.current.setEffectiveTimeScale(1)
-        idleAction.current.setEffectiveWeight(1)
-        idleAction.current.clampWhenFinished = true
-        idleAction.current.play()
-      }
-    })
-  }, [])
+  //   loader.load('/animations/Breathing Idle.fbx', (fbx) => {
+  //     if (group.current) {
+  //       const animation = fbx.animations[0]
+  //       idleAction.current = mixer.current.clipAction(animation)
+  //       idleAction.current.setEffectiveTimeScale(1)
+  //       idleAction.current.setEffectiveWeight(1)
+  //       idleAction.current.clampWhenFinished = true
+  //       idleAction.current.play()
+  //     }
+  //   })
+  // }, [])
 
-  // Handle walking animation
-  useEffect(() => {
-    if(!walkingAction.current && !idleAction.current) return
+  // // Handle walking animation
+  // useEffect(() => {
+  //   if(!walkingAction.current && !idleAction.current) return
 
-    if (isWalking) {
-      idleAction.current.fadeOut(0.3);
-      walkingAction.current.reset().fadeIn(0.3).play();
-    } else {
-      walkingAction.current.fadeOut(0.3);
-      idleAction.current.reset().fadeIn(0.3).play();
-    }
-  }, [isWalking])
+  //   if (isWalking) {
+  //     idleAction.current.fadeOut(0.3);
+  //     walkingAction.current.reset().fadeIn(0.3).play();
+  //   } else {
+  //     walkingAction.current.fadeOut(0.3);
+  //     idleAction.current.reset().fadeIn(0.3).play();
+  //   }
+  // }, [isWalking])
 
-  // Update animation mixer
-  useFrame((state, delta) => {
-    if (mixer.current) {
-      mixer.current.update(delta)
-    }
-  })
+  // // Update animation mixer
+  // useFrame((state, delta) => {
+  //   if (mixer.current) {
+  //     mixer.current.update(delta)
+  //   }
+  // })
 
   // Cleanup function for materials and geometries
   useEffect(() => {

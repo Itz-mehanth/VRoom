@@ -18,7 +18,7 @@ const WEBSOCKET_PING_INTERVAL = parseInt(process.env.WEBSOCKET_PING_INTERVAL) ||
 
 // Enable CORS
 app.use(cors({
-  origin: [FRONTEND_URL, "https://localhost:5173", "https://vrroom.netlify.app"],
+  origin: [FRONTEND_URL, "https://localhost:5173", "https://10.249.172.131:5173", "https://vrroom.netlify.app"],
   methods: ["GET", "POST"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization", "Upgrade", "Connection"]
@@ -54,7 +54,7 @@ const peerServer = ExpressPeerServer(server, {
   path: '/',
   key: 'peerjs',
   corsOptions: {
-    origin: [FRONTEND_URL, "https://localhost:5173", "https://vrroom.netlify.app"],
+    origin: [FRONTEND_URL, "https://localhost:5173", "https://10.249.172.131:5173", "https://vrroom.netlify.app"],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -65,7 +65,7 @@ app.use('/peerjs', peerServer);
 
 const io = socketIO(server, {
   cors: {
-    origin: [FRONTEND_URL, "https://localhost:5173", "https://vrroom.netlify.app"],
+    origin: [FRONTEND_URL, "https://localhost:5173", "https://10.249.172.131:5173", "https://vrroom.netlify.app"],
     methods: ["GET", "POST"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "Upgrade", "Connection"]
@@ -91,7 +91,7 @@ io.on('connection', socket => {
     // Store roomId in socket data
     socket.data.roomId = roomId;
     console.log(`Stored roomId ${roomId} in socket data`);
-    
+
     // Initialize room if it doesn't exist
     if (!rooms.has(roomId)) {
       rooms.set(roomId, {
@@ -100,10 +100,10 @@ io.on('connection', socket => {
       });
       console.log(`Created new room: ${roomId}`);
     }
-    
+
     // Add user to room
     const usersMap = rooms.get(roomId).users;
-    
+
     // Remove any existing entries for this user (by userName or socketId)
     for (const [existingId, existingUser] of usersMap.entries()) {
       if (existingUser.name === userName || existingUser.socketId === socket.id) {
@@ -120,22 +120,22 @@ io.on('connection', socket => {
       position: { x: 0, y: 2, z: 0 }, // Set y to 2 to match VRScene initial height
       isWalking: false // Initialize isWalking state
     });
-    
+
     // Log new user and current room state
     console.log(`User joined - Room: ${roomId}`);
     console.log(`User details - ID: ${userId}, SocketID: ${socket.id}, Name: ${userName}`);
     console.log('Current users in room:', Array.from(rooms.get(roomId).users.values()));
-    
+
     // Send chat history to new user
     socket.emit('chat-history', rooms.get(roomId).messages);
-    
+
     // Emit updated user list to all clients in the room
     const usersInRoom = Array.from(rooms.get(roomId).users.values());
     io.to(roomId).emit('room-users', usersInRoom);
-    
+
     // Notify others that user joined
     console.log(`Notifying others that user joined - Room: ${roomId}`);
-    socket.to(roomId).emit('user-connected', userId);
+    socket.to(roomId).emit('user-connected', { userId, userName });
     console.log(`Notified others that user joined - Room: ${roomId}`);
 
     // Send system message about user joining
@@ -159,7 +159,7 @@ io.on('connection', socket => {
         userId: userId,
         userName: userName
       };
-      
+
       if (rooms.has(roomId)) {
         rooms.get(roomId).messages.push(newMessage);
         // Keep only last 100 messages
@@ -176,7 +176,7 @@ io.on('connection', socket => {
         // Find user by socket ID
         let disconnectedUser = null;
         let disconnectedUserId = null;
-        
+
         for (const [userId, user] of rooms.get(roomId).users.entries()) {
           if (user.socketId === socket.id) {
             disconnectedUser = user;
@@ -184,13 +184,13 @@ io.on('connection', socket => {
             break;
           }
         }
-        
+
         if (disconnectedUser) {
           rooms.get(roomId).users.delete(disconnectedUserId);
-          
+
           console.log(`User disconnected - Room: ${roomId}`);
           console.log(`Disconnected user: ${disconnectedUser.name} (${disconnectedUserId})`);
-          
+
           // Send system message about user leaving
           const leaveMessage = {
             id: uuidV4(),
@@ -201,7 +201,7 @@ io.on('connection', socket => {
           };
           rooms.get(roomId).messages.push(leaveMessage);
           io.to(roomId).emit('chat-message', leaveMessage);
-          
+
           // If room is empty, delete it
           if (rooms.get(roomId).users.size === 0) {
             rooms.delete(roomId);
@@ -213,8 +213,13 @@ io.on('connection', socket => {
             io.to(roomId).emit('room-users', updatedUsers);
           }
         }
-        
-        socket.to(roomId).emit('user-disconnected', disconnectedUserId);
+
+
+        if (disconnectedUser) {
+          socket.to(roomId).emit('user-disconnected', { userId: disconnectedUserId, userName: disconnectedUser.name });
+        } else {
+          socket.to(roomId).emit('user-disconnected', { userId: disconnectedUserId, userName: 'Unknown User' });
+        }
       }
     });
   });
@@ -222,11 +227,11 @@ io.on('connection', socket => {
   // Handle position updates - moved outside join-room
   socket.on('update-transform', (data) => {
     console.log('Received position update:', data);
-    
+
     // Use the stored roomId from socket data
     const roomId = socket.data.roomId;
     console.log('Room ID from socket data:', roomId);
-    
+
     if (!roomId) {
       console.log('No room ID found for this socket');
       return;
@@ -237,7 +242,7 @@ io.on('connection', socket => {
       const room = rooms.get(roomId);
       const userEntry = Array.from(room.users.entries())
         .find(([_, user]) => user.name === data.userName);
-      
+
       if (userEntry) {
         const [userId, user] = userEntry;
         if (user) {
@@ -247,7 +252,7 @@ io.on('connection', socket => {
           console.log(`New position - x: ${data.position.x.toFixed(2)}, y: ${data.position.y.toFixed(2)}, z: ${data.position.z.toFixed(2)}`);
           console.log(`New rotation - x: ${data.rotation.x.toFixed(2)}, y: ${data.rotation.y.toFixed(2)}, z: ${data.rotation.z.toFixed(2)}`);
           console.log(`Is walking: ${data.isWalking}`);
-          
+
           // Broadcast the updated position to all users in the room
           io.to(roomId).emit('user-transform', {
             userName: data.userName,

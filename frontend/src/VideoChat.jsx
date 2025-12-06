@@ -3,1110 +3,606 @@ import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { useNavigate } from 'react-router-dom';
 
+/* --- Components --- */
+
+import {
+  Mic, MicOff, Video, VideoOff, ScreenShare, Box, PhoneOff, Send, ArrowLeft, MessageSquare, X, LayoutGrid, Glasses, Maximize, Search
+} from 'lucide-react';
+
+/* --- Components --- */
+
+const Icons = {
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  ScreenShare,
+  AR: Box,
+  Hangup: PhoneOff,
+  Send,
+  Back: ArrowLeft,
+  Chat: MessageSquare,
+  Close: X,
+  Grid: LayoutGrid,
+  Vr: Glasses,
+  Fullscreen: Maximize,
+  Search
+};
+
 const ChatMessage = ({ message, currentUserId }) => {
-    const isSystem = message.type === 'system';
-    const isCurrentUser = message.userId === currentUserId;
-  
-    return (
-      <div style={{
-        marginBottom: '12px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: isSystem ? 'center' : (isCurrentUser ? 'flex-end' : 'flex-start'),
-        width: '100%'
-      }}>
-        {!isSystem && (
-          <div style={{ 
-            fontSize: '0.8125rem', 
-            color: '#9aa0a6',
-            marginBottom: '4px',
-            paddingLeft: isCurrentUser ? '0' : '8px',
-            paddingRight: isCurrentUser ? '8px' : '0'
-          }}>
-            {isCurrentUser ? 'You' : message.userName}
-          </div>
-        )}
+  const isSystem = message.type === 'system';
+  const isCurrentUser = message.userId === currentUserId;
+
+  return (
+    <div style={{
+      marginBottom: '16px',
+      display: 'flex',
+      flexDirection: isSystem ? 'row' : (isCurrentUser ? 'row-reverse' : 'row'),
+      alignItems: 'flex-start',
+      gap: '12px',
+      width: '100%',
+      justifyContent: isSystem ? 'center' : 'flex-start'
+    }}>
+      {!isSystem && (
+        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#eee', overflow: 'hidden', flexShrink: 0 }}>
+          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${message.userName}`} alt="Avatar" style={{ width: '100%', height: '100%' }} />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: isCurrentUser ? 'flex-end' : 'flex-start', maxWidth: '70%' }}>
+        {!isSystem && !isCurrentUser && <span style={{ fontSize: '0.75rem', color: '#888', marginBottom: 4 }}>{message.userName}</span>}
         <div style={{
-          backgroundColor: isSystem ? '#303134' : (isCurrentUser ? '#8ab4f8' : '#3c4043'),
-          color: isSystem ? '#9aa0a6' : (isCurrentUser ? '#202124' : 'white'),
-          padding: '8px 12px',
-          borderRadius: '8px',
-          maxWidth: '80%',
-          wordBreak: 'break-word',
-          fontSize: isSystem ? '0.8125rem' : '0.875rem',
-          fontStyle: isSystem ? 'italic' : 'normal'
+          backgroundColor: isSystem ? 'transparent' : (isCurrentUser ? '#F0F2F5' : '#fff'),
+          color: isSystem ? '#999' : '#1a1a1a',
+          padding: isSystem ? '0' : '12px 16px',
+          borderRadius: isSystem ? '0' : '16px',
+          borderTopLeftRadius: isCurrentUser ? '16px' : '4px',
+          borderTopRightRadius: isCurrentUser ? '4px' : '16px',
+          fontSize: '0.9rem',
+          fontStyle: isSystem ? 'italic' : 'normal',
+          boxShadow: isSystem ? 'none' : '0 2px 5px rgba(0,0,0,0.03)',
+          border: isSystem ? 'none' : '1px solid #f0f0f0'
         }}>
           {message.content}
         </div>
-        <div style={{ 
-          fontSize: '0.75rem', 
-          color: '#9aa0a6',
-          marginTop: '4px',
-          paddingLeft: isCurrentUser ? '0' : '8px',
-          paddingRight: isCurrentUser ? '8px' : '0'
-        }}>
-          {new Date(message.timestamp).toLocaleTimeString()}
-        </div>
+        {!isSystem && <span style={{ fontSize: '0.7rem', color: '#ccc', marginTop: 4 }}>{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>}
       </div>
-    );
+    </div>
+  );
+};
+
+const Snackbar = ({ message, show }) => (
+  <div style={{
+    position: 'absolute',
+    bottom: '90px',
+    left: '50%',
+    transform: `translateX(-50%) translateY(${show ? '0' : '20px'})`,
+    backgroundColor: '#323232',
+    color: 'white',
+    padding: '12px 24px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    zIndex: 4000,
+    opacity: show ? 1 : 0,
+    transition: 'all 0.3s ease',
+    pointerEvents: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    fontSize: '0.95rem'
+  }}>
+    <span>ℹ️</span> {message}
+  </div>
+);
+
+// Video Component
+const VideoTile = memo(({ stream, peerId, isLocal, userName, isVideoEnabled, isAudioEnabled, isFocused, onClick, small, error }) => {
+  const videoRef = useRef();
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play().catch(console.error);
+    }
+  }, [stream]);
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        borderRadius: small ? '16px' : '24px',
+        overflow: 'hidden',
+        backgroundColor: '#202124',
+        cursor: 'pointer',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        border: isFocused ? '2px solid #C9F31D' : 'none',
+        pointerEvents: 'auto'
+      }}
+    >
+      {stream ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted={isLocal}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', transform: isLocal ? 'scaleX(-1)' : 'none' }}
+        />
+      ) : (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#333', color: '#ea4335', textAlign: 'center', padding: '10px' }}>
+          {/* Show Error if exists, else Avatar */}
+          {stream === null && isLocal && (
+            <div style={{ marginBottom: 8, fontSize: '0.8rem', fontWeight: 'bold' }}>
+              {error || 'Camera Unavailable'}
+            </div>
+          )}
+          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userName}`} alt={userName} style={{ width: '60%', height: '60%', borderRadius: '50%', opacity: 0.5 }} />
+        </div>
+      )}
+
+      <div style={{
+        position: 'absolute',
+        bottom: 12,
+        left: 12,
+        background: 'rgba(0,0,0,0.5)',
+        padding: '4px 12px',
+        borderRadius: '12px',
+        color: 'white',
+        fontSize: '0.8rem',
+        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6
+      }}>
+        <span>{isLocal ? 'You' : userName}</span>
+        {!isAudioEnabled && <span style={{ color: '#ea4335' }}><Icons.MicOff /></span>}
+      </div>
+    </div>
+  );
+});
+
+
+const VideoChat = ({
+  roomId,
+  userName,
+  onLeaveRoom,
+  toggleView,
+  users,
+  setUsers,
+  currentView,
+  setSocket,
+  setEnterAr,
+  enterAr
+}) => {
+  const videoRef = useRef();
+  const peerInstanceRef = useRef();
+
+  const socketRef = useRef();
+  const callsRef = useRef({}); // Track active calls to prevent GC
+  const [myPeerId, setMyPeerId] = useState(null);
+  const [connectedPeers, setConnectedPeers] = useState(new Set());
+  const [peerStreams, setPeerStreams] = useState(new Map());
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [activeTab, setActiveTab] = useState('chat');
+  const [focusedVideo, setFocusedVideo] = useState(null);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(true);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [localStream, setLocalStream] = useState(null);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [screenStream, setScreenStream] = useState(null);
+  const chatContainerRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [showSidebar, setShowSidebar] = useState(false); // Default hidden
+
+  const [notification, setNotification] = useState('');
+  const [cameraError, setCameraError] = useState(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+
+  // --- Socket Logic ---
+  const handleSendMessage = (e) => {
+    e.preventDefault();
+    if (newMessage.trim()) {
+      socketRef.current.emit('send-message', newMessage.trim());
+      setNewMessage('');
+    }
   };
-  
-  // Separate VideoContainer component
-  const VideoContainer = memo(({ stream, peerId, isLocal, userName, isVideoEnabled, isAudioEnabled, users, focusedVideo, setFocusedVideo }) => {
-    const videoRef = useRef();
-    const isFocused = focusedVideo === (isLocal ? 'local' : peerId);
-    const containerStyle = {
-      position: 'relative',
-      paddingTop: '56.25%',
-      backgroundColor: '#3c4043',
-      borderRadius: '8px',
-      overflow: 'hidden',
-      cursor: 'pointer',
-      gridColumn: isFocused ? '1 / -1' : 'auto',
-      gridRow: isFocused ? '1 / span 2' : 'auto',
-    };
-  
-    const displayName = isLocal ? `${userName} (You)` : users.find(u => u.id === peerId)?.name || 'Unknown';
-    const isVideoOff = isLocal ? !isVideoEnabled : false;
-  
-    useEffect(() => {
-      if (videoRef.current && stream) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(console.error);
+
+  const getCameraStream = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      setCameraError(null);
+      return stream;
+    } catch (err) {
+      console.error("Camera Error:", err);
+      setCameraError(err.name + ": " + err.message);
+      return null;
+    }
+  };
+
+  const connectToNewUser = (userId, stream) => {
+    try {
+      console.log('[Peer] Calling user:', userId);
+      const call = peerInstanceRef.current.call(userId, stream);
+      callsRef.current[userId] = call;
+
+      call.on('stream', remoteStream => {
+        console.log('[Peer] Received remote stream from callee:', userId);
+        setPeerStreams(prev => { const n = new Map(prev); n.set(userId, remoteStream); return n; });
+        setConnectedPeers(prev => new Set([...prev, userId]));
+      });
+      call.on('close', () => {
+        console.log('[Peer] Call closed with:', userId);
+        setPeerStreams(prev => { const n = new Map(prev); n.delete(userId); return n; });
+        setConnectedPeers(prev => { const n = new Set(prev); n.delete(userId); return n; });
+        delete callsRef.current[userId];
+      });
+      call.on('error', (err) => {
+        console.error('[Peer] Call error:', err);
+        delete callsRef.current[userId];
+      });
+    } catch (error) { console.error("Call failed:", error); }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    let myStream = null;
+
+    const init = async () => {
+      try {
+        const stream = await getCameraStream();
+        if (!mounted) return;
+        myStream = stream;
+        setLocalStream(stream);
+
+        const isProd = false; // Set to true for production URL logic if needed
+        const url = isProd ? 'https://vrroom-x6vw.onrender.com' : 'https://localhost:3001';
+
+        const socket = io(url, { secure: true, rejectUnauthorized: false });
+        socketRef.current = socket;
+        setSocket(socket);
+
+        const peer = new Peer(undefined, { host: isProd ? 'vrroom-x6vw.onrender.com' : 'localhost', port: isProd ? '443' : '3001', path: '/peerjs', secure: true });
+        peerInstanceRef.current = peer;
+
+        // --- Peer Listeners ---
+        peer.on('call', call => {
+          console.log('[Peer] Received incoming call from:', call.peer);
+          callsRef.current[call.peer] = call;
+          call.answer(stream);
+          call.on('stream', remoteStream => {
+            console.log('[Peer] Received remote stream from:', call.peer);
+            setPeerStreams(prev => { const n = new Map(prev); n.set(call.peer, remoteStream); return n; });
+            setConnectedPeers(prev => new Set([...prev, call.peer]));
+          });
+        });
+
+        peer.on('open', id => {
+          console.log('[Peer] My ID:', id);
+          setMyPeerId(id);
+          // Only join room after Peer is ready AND we have stream
+          if (socket.connected) {
+            socket.emit('join-room', roomId, id, userName);
+          } else {
+            socket.once('connect', () => socket.emit('join-room', roomId, id, userName));
+          }
+        });
+
+        // --- Socket Listeners ---
+        socket.on('user-connected', ({ userId, userName }) => {
+          console.log('[Socket] User connected:', userId, userName);
+          const newUser = users.find(u => u.id === userId); // Note: users might be stale here, rely on passed name
+          const nameToShow = newUser ? newUser.name : userName;
+          setNotification(`${nameToShow || 'User'} joined`);
+          setTimeout(() => setNotification(''), 3000);
+
+          // Initiate call since we are the existing user
+          connectToNewUser(userId, stream);
+        });
+
+        socket.on('user-disconnected', ({ userId, userName }) => {
+          setNotification(`${userName} left`);
+          setTimeout(() => setNotification(''), 3000);
+          setPeerStreams(prev => { const n = new Map(prev); n.delete(userId); return n; });
+          setConnectedPeers(prev => { const n = new Set(prev); n.delete(userId); return n; });
+        });
+
+        socket.on('room-users', (roomUsers) => setUsers(roomUsers));
+
+        socket.on('chat-message', (msg) => {
+          setMessages(prev => [...prev, msg]);
+          setTimeout(() => chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' }), 100);
+        });
+
+      } catch (err) {
+        console.error("Failed to initialize VideoChat:", err);
       }
-    }, [stream]);
-  
-    return (
-      <div
-        style={containerStyle}
-        onClick={() => setFocusedVideo(isFocused ? null : (isLocal ? 'local' : peerId))}
-      >
-        {stream && (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted={isLocal}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              display: isVideoOff ? 'none' : 'block'
-            }}
-          />
-        )}
-        {isVideoOff && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-            gap: '12px'
-          }}>
-            <div style={{
-              width: '80px',
-              height: '80px',
-              backgroundColor: '#8ab4f8',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '2rem',
-              color: '#202124'
-            }}>
-              {displayName[0].toUpperCase()}
-            </div>
-            <div style={{
-              color: '#fff',
-              fontSize: '1rem'
-            }}>
-              Camera Off
-            </div>
-          </div>
-        )}
+    };
+
+    init();
+
+    return () => {
+      mounted = false;
+      socketRef.current?.disconnect();
+      peerInstanceRef.current?.destroy();
+      if (myStream) myStream.getTracks().forEach(t => t.stop());
+    }
+  }, [roomId, userName]);
+
+
+  /* --- Layout Logic --- */
+  const featuredPeerId = focusedVideo === 'local' ? null : (focusedVideo || null);
+  const showLocalAsFeatured = focusedVideo === 'local';
+  const showFeatured = !!featuredPeerId || showLocalAsFeatured;
+
+  const featuredStream = showLocalAsFeatured ? localStream : peerStreams.get(featuredPeerId);
+  const featuredName = showLocalAsFeatured ? `${userName} (You)` : (users.find(u => u.id === featuredPeerId)?.name || 'Peer');
+
+  const thumbnails = [];
+  if (localStream && !showLocalAsFeatured) thumbnails.push({ id: 'local', stream: localStream, name: `${userName} (You)`, isLocal: true });
+
+  peerStreams.forEach((stream, id) => {
+    if (id !== featuredPeerId) {
+      thumbnails.push({ id, stream, name: users.find(u => u.id === id)?.name || 'Peer', isLocal: false });
+    }
+  });
+
+  // Filter users for search
+  const [searchTerm, setSearchTerm] = useState('');
+  const filteredUsers = users.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  return (
+    <div style={{ display: 'flex', height: '100vh', width: '100%', backgroundColor: 'transparent', overflow: 'hidden', pointerEvents: 'none', flexDirection: isMobile ? 'column' : 'row' }}>
+
+      {/* Main Stage */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+
+        {/* Top Control Bar (Room Info etc) */}
         <div style={{
           position: 'absolute',
-          bottom: '12px',
-          left: '12px',
-          right: '12px',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '64px',
+          padding: '0 24px',
           display: 'flex',
           justifyContent: 'space-between',
+          alignItems: 'center',
+          pointerEvents: 'auto',
+          zIndex: 1000,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button onClick={onLeaveRoom} style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', color: 'white' }}>
+              <Icons.Back />
+            </button>
+          </div>
+
+          {/* Center: View Toggle */}
+          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(12px)', borderRadius: '24px', padding: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <button
+              onClick={() => currentView !== 'video' && toggleView()}
+              style={{
+                background: currentView === 'video' ? '#333' : 'transparent',
+                color: currentView === 'video' ? 'white' : '#aaa',
+                border: 'none', borderRadius: '20px', padding: '8px 20px',
+                fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s'
+              }}
+            >
+              <Icons.Grid style={{ width: 18, height: 18 }} stroke={currentView === 'video' ? 'white' : '#aaa'} />
+              {!isMobile && "grid"}
+            </button>
+            <button
+              onClick={() => currentView !== 'vr' && toggleView()}
+              style={{
+                background: currentView === 'vr' ? '#333' : 'transparent',
+                color: currentView === 'vr' ? 'white' : '#aaa',
+                border: 'none', borderRadius: '20px', padding: '8px 20px',
+                fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s'
+              }}
+            >
+              <Icons.Vr style={{ width: 18, height: 18 }} stroke={currentView === 'vr' ? 'white' : '#aaa'} />
+              {!isMobile && "3D world"}
+            </button>
+          </div>
+
+          {/* Right */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Info Only */}
+          </div>
+        </div>
+
+        {/* Content Area */}
+        <div style={{ flex: 1, position: 'relative', display: 'flex', overflow: 'hidden' }}>
+          {/* VR / Video Logic */}
+          <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: currentView === 'video' || showFeatured ? 'block' : 'none' }}>
+            {showFeatured && (
+              <VideoTile stream={featuredStream} isLocal={showLocalAsFeatured} userName={featuredName} isFocused={true} isAudioEnabled={true} onClick={() => setFocusedVideo(null)} />
+            )}
+            {currentView === 'video' && !showFeatured && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', padding: '64px 24px 100px', height: '100%', alignContent: 'center', overflowY: 'auto' }}>
+                <VideoTile stream={localStream} isLocal={true} userName="You" isAudioEnabled={isAudioEnabled} error={cameraError} />
+
+                {Array.from(peerStreams.entries()).map(([peerId, stream]) => {
+                  const peerUser = users.find(u => u.id === peerId);
+                  return (
+                    <VideoTile
+                      key={peerId}
+                      stream={stream}
+                      userName={peerUser ? peerUser.name : 'User'}
+                      isLocal={false}
+                      isAudioEnabled={true}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Self View in VR */}
+          {currentView === 'vr' && localStream && (
+            <div style={{ position: 'absolute', bottom: '100px', right: '24px', width: '200px', borderRadius: '12px', overflow: 'hidden', border: '2px solid rgba(255,255,255,0.1)', zIndex: 50 }}>
+              <VideoTile stream={localStream} isLocal={true} userName="You" isAudioEnabled={isAudioEnabled} small />
+            </div>
+          )}
+
+          {/* Thumbnails Strip (Desktop Only, Video Mode) */}
+          {currentView === 'video' && showFeatured && !isMobile && (
+            <div style={{ position: 'absolute', right: 24, top: '50%', transform: 'translateY(-50%)', width: '180px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '80%', overflowY: 'auto' }}>
+              {thumbnails.map(t => (
+                <div key={t.id} style={{ width: '100%', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', border: '2px solid transparent' }}>
+                  <VideoTile stream={t.stream} isLocal={t.isLocal} userName={t.name} small onClick={() => setFocusedVideo(t.id === 'local' ? 'local' : t.id)} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Dock Control Bar */}
+        <div style={{
+          position: 'absolute',
+          bottom: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          gap: '12px',
+          padding: '12px 24px',
+          background: '#202124',
+          borderRadius: '24px',
+          border: '1px solid #333',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          zIndex: 2000,
+          pointerEvents: 'auto',
           alignItems: 'center'
         }}>
-          <div style={{
-            backgroundColor: 'rgba(0,0,0,0.6)',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            fontSize: '0.875rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}>
-            <span>{displayName}</span>
-            {isLocal && (
-              <span style={{ opacity: 0.8 }}>
-                {!isAudioEnabled && '🔇'}
-              </span>
-            )}
-          </div>
+          <button onClick={() => setIsAudioEnabled(!isAudioEnabled)} style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: isAudioEnabled ? '#3C4043' : '#ea4335', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {isAudioEnabled ? <Icons.Mic /> : <Icons.MicOff />}
+          </button>
+          <button onClick={() => setIsVideoEnabled(!isVideoEnabled)} style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: isVideoEnabled ? '#3C4043' : '#ea4335', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {isVideoEnabled ? <Icons.Video /> : <Icons.VideoOff />}
+          </button>
+
+          <div style={{ width: 1, height: 24, background: '#555', margin: '0 8px' }} />
+
+          <button onClick={() => setIsScreenSharing(!isScreenSharing)} style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: isScreenSharing ? '#8AB4F8' : '#3C4043', color: isScreenSharing ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icons.ScreenShare stroke={isScreenSharing ? '#202124' : 'white'} />
+          </button>
+
+          <button onClick={() => { if (currentView !== 'vr') toggleView(); }} title="Enter VR Mode" style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: currentView === 'vr' ? '#8AB4F8' : '#3C4043', color: currentView === 'vr' ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icons.Vr stroke={currentView === 'vr' ? '#202124' : 'white'} />
+          </button>
+
+          <button onClick={() => setEnterAr(!enterAr)} title="Enter AR Mode" style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: enterAr ? '#8AB4F8' : '#3C4043', color: enterAr ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icons.AR stroke={enterAr ? '#202124' : 'white'} />
+          </button>
+
+          <button onClick={() => setShowSidebar(!showSidebar)} style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: showSidebar ? '#8AB4F8' : '#3C4043', color: showSidebar ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icons.Chat stroke={showSidebar ? '#013ef7ff' : 'white'} />
+          </button>
+
+          <button onClick={() => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }} style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: '#3C4043', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icons.Fullscreen />
+          </button>
+
+          <div style={{ width: 1, height: 24, background: '#555', margin: '0 8px' }} />
+
+          <button onClick={onLeaveRoom} style={{ padding: '0 24px', height: 44, borderRadius: '24px', border: 'none', background: '#ea4335', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icons.Hangup style={{ marginRight: 8 }} />
+            <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>End Call</span>
+          </button>
         </div>
+
       </div>
-    );
-  });
-  
-  // Separate VideoGrid component
-  const VideoGrid = memo(({ 
-    localStream, 
-    peerStreams, 
-    userName, 
-    isVideoEnabled, 
-    isAudioEnabled, 
-    users, 
-    focusedVideo, 
-    setFocusedVideo 
-  }) => {
-    return (
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-        gap: '16px',
-        padding: '16px',
-        height: '100%',
-        overflow: 'auto',
-        pointerEvents: 'auto'
-      }}>
-        {localStream && (
-          <VideoContainer
-            stream={localStream}
-            isLocal={true}
-            userName={userName}
-            isVideoEnabled={isVideoEnabled}
-            isAudioEnabled={isAudioEnabled}
-            users={users}
-            focusedVideo={focusedVideo}
-            setFocusedVideo={setFocusedVideo}
-          />
-        )}
-        {Array.from(peerStreams).map(([peerId, stream]) => (
-          <VideoContainer
-            key={peerId}
-            stream={stream}
-            peerId={peerId}
-            isLocal={false}
-            userName={userName}
-            isVideoEnabled={isVideoEnabled}
-            isAudioEnabled={isAudioEnabled}
-            users={users}
-            focusedVideo={focusedVideo}
-            setFocusedVideo={setFocusedVideo}
-          />
-        ))}
-      </div>
-    );
-  });
-  
-  const VideoChat = ({ 
-    roomId, 
-    userName, 
-    onLeaveRoom, 
-    toggleView, 
-    users, 
-    setUsers, 
-    currentView,
-    setSocket,
-    setEnterAr,
-    enterAr
-  }) => {
-    const videoRef = useRef();
-    const peerInstanceRef = useRef();
-    const socketRef = useRef();
-    const [myPeerId, setMyPeerId] = useState(null);
-    const [connectedPeers, setConnectedPeers] = useState(new Set());
-    const [peerStreams, setPeerStreams] = useState(new Map());
-    const [messages, setMessages] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [isChatOpen, setIsChatOpen] = useState(false);
-    const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
-    const [focusedVideo, setFocusedVideo] = useState(null);
-    const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-    const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-    const [localStream, setLocalStream] = useState(null);
-    const [isScreenSharing, setIsScreenSharing] = useState(false);
-    const [screenStream, setScreenStream] = useState(null);
-    const previousStreamRef = useRef(null);
-    const chatContainerRef = useRef(null);
-    const transformDataRef = useRef(new Map());
-    const animationStateRef = useRef(new Map());
-    const [notification, setNotification] = useState('');
-  
-    // Function to handle transform updates with animation state check
-    const handleTransformUpdate = (userName, transformData) => {
-      // If user is currently animating, ignore the update
-      if (animationStateRef.current.get(userName)) {
-        return;
-      }
 
-      // Set animation state to true
-      animationStateRef.current.set(userName, true);
+      <Snackbar message={notification} show={!!notification} />
 
-      // Update users with new position/rotation
-      setUsers(prevUsers => {
-        return prevUsers.map(user => {
-          if (user.name === userName) {
-            return {
-              ...user,
-              ...transformData,
-              isAnimating: true
-            };
-          }
-          return user;
-        });
-      });
-
-      // Set a timeout to mark animation as complete
-      setTimeout(() => {
-        animationStateRef.current.set(userName, false);
-        setUsers(prevUsers => {
-          return prevUsers.map(user => {
-            if (user.name === userName) {
-              return {
-                ...user,
-                isAnimating: false
-              };
-            }
-            return user;
-          });
-        });
-      }, 1000); // Adjust this value based on your animation duration
-    };
-  
-    // Function to update user transform data without triggering re-render
-    const updateUserTransform = (userName, data) => {
-      const currentData = transformDataRef.current.get(userName) || {};
-      transformDataRef.current.set(userName, {
-        ...currentData,
-        ...data,
-        isAnimating: animationStateRef.current.get(userName) || false
-      });
-    };
-  
-    // Function to get latest transform data for a user
-    const getUserTransform = (userName) => {
-      return transformDataRef.current.get(userName) || {};
-    };
-  
-    // Function to get camera stream
-    const getCameraStream = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
-        });
-        return stream;
-      } catch (error) {
-        console.error('Error getting camera stream:', error);
-        throw error;
-      }
-    };
-  
-    // Function to switch stream for all peer connections
-    const switchStreamForPeers = async (newStream) => {
-      const peers = Array.from(connectedPeers);
-      
-      // Store video/audio states
-      const wasVideoEnabled = isVideoEnabled;
-      const wasAudioEnabled = isAudioEnabled;
-  
-      // Stop all tracks in the old stream
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
-  
-      // Set the new stream
-      setLocalStream(newStream);
-  
-      // Set initial track states based on previous states
-      newStream.getVideoTracks().forEach(track => {
-        track.enabled = wasVideoEnabled;
-      });
-      newStream.getAudioTracks().forEach(track => {
-        track.enabled = wasAudioEnabled;
-      });
-  
-      // Update all peer connections with the new stream
-      peers.forEach(peerId => {
-        const calls = peerInstanceRef.current.connections[peerId];
-        calls?.forEach(call => {
-          // Replace tracks in the peer connection
-          call.peerConnection?.getSenders().forEach(sender => {
-            const track = newStream.getTracks().find(t => t.kind === sender.track.kind);
-            if (track) {
-              sender.replaceTrack(track);
-            }
-          });
-        });
-      });
-    };
-  
-    const startScreenShare = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            cursor: "always"
-          },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true
-          }
-        });
-  
-        // Save current stream to restore later
-        if (!isScreenSharing) {
-          previousStreamRef.current = localStream;
-        }
-  
-        // Handle stream stop
-        stream.getVideoTracks()[0].addEventListener('ended', () => {
-          stopScreenShare();
-        });
-  
-        await switchStreamForPeers(stream);
-        setScreenStream(stream);
-        setIsScreenSharing(true);
-      } catch (error) {
-        console.error('Error sharing screen:', error);
-        alert('Could not share screen. Please check permissions.');
-      }
-    };
-  
-    const stopScreenShare = async () => {
-      try {
-        // Stop all tracks in the screen share stream
-        if (screenStream) {
-          screenStream.getTracks().forEach(track => track.stop());
-        }
-  
-        let newStream;
-        // Restore previous stream if it exists
-        if (previousStreamRef.current) {
-          try {
-            // Try to reuse the previous stream
-            if (previousStreamRef.current.active) {
-              newStream = previousStreamRef.current;
-            } else {
-              // If previous stream is inactive, get a new camera stream
-              newStream = await getCameraStream();
-            }
-          } catch (error) {
-            // If there's an error with the previous stream, get a new one
-            newStream = await getCameraStream();
-          }
-        } else {
-          // If no previous stream, get a new camera stream
-          newStream = await getCameraStream();
-        }
-  
-        await switchStreamForPeers(newStream);
-        previousStreamRef.current = null;
-        setScreenStream(null);
-        setIsScreenSharing(false);
-      } catch (error) {
-        console.error('Error stopping screen share:', error);
-        // Try to get a new camera stream as fallback
-        try {
-          const newStream = await getCameraStream();
-          await switchStreamForPeers(newStream);
-          setIsScreenSharing(false);
-        } catch (fallbackError) {
-          console.error('Error getting camera stream after screen share:', fallbackError);
-          alert('Could not restore camera. Please refresh the page.');
-        }
-      }
-    };
-  
-    useEffect(() => {
-      console.log('Component mounted - Initializing connections');
-  
-      // Initialize animation state tracking
-      animationStateRef.current = new Map();
-  
-      if(true){
-        // Connect to socket.io backend
-        const socketUrl = 'https://vrroom-x6vw.onrender.com';
-        socketRef.current = io(socketUrl, {
-          withCredentials: true,
-          transports: ['websocket', 'polling'],
-          secure: true,
-          rejectUnauthorized: false,
-          reconnection: true,
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-          timeout: 10000,
-          autoConnect: true,
-          forceNew: true
-        });
-    
-        // Add detailed error handling
-        socketRef.current.on('connect_error', (error) => {
-          console.error('Socket connection error:', error);
-          console.error('Error details:', {
-            message: error.message,
-            description: error.description,
-            type: error.type,
-            context: error.context
-          });
-          
-          // Try to reconnect with polling if websocket fails
-          if (error.message.includes('websocket')) {
-            console.log('WebSocket failed, attempting to connect with polling...');
-            socketRef.current.io.opts.transports = ['polling', 'websocket'];
-          }
-        });
-
-        socketRef.current.on('connect', () => {
-          console.log('Socket connected successfully');
-          console.log('Transport:', socketRef.current.io.engine.transport.name);
-        });
-
-        socketRef.current.on('disconnect', (reason) => {
-          console.log('Socket disconnected:', reason);
-          if (reason === 'io server disconnect') {
-            // Server initiated disconnect, try to reconnect
-            socketRef.current.connect();
-          }
-        });
-
-        socketRef.current.on('reconnect_attempt', (attemptNumber) => {
-          console.log('Reconnection attempt:', attemptNumber);
-        });
-
-        socketRef.current.on('reconnect_failed', () => {
-          console.error('Failed to reconnect to server');
-          // Notify user about connection issues
-          alert('Unable to connect to server. Please check your internet connection and try again.');
-        });
-    
-        // Initialize peer
-        peerInstanceRef.current = new Peer(undefined, {
-          host: 'vrroom-x6vw.onrender.com',
-          port: '443',
-          path:  '/peerjs',
-          secure: true,
-          debug: 3
-        });
-      } else {
-        // Connect to socket.io backend
-        const socketUrl = 'https://localhost:3001';
-        socketRef.current = io(socketUrl, {
-          secure: true,
-          rejectUnauthorized: false
-        });
-  
-        // Initialize peer
-        peerInstanceRef.current = new Peer(undefined, {
-          host: 'localhost',
-          port: '3001',
-          path: '/peerjs',
-          secure: true,
-          debug: 3
-        });
-      }
-
-      // Handle socket connection
-      socketRef.current.on('connect', () => {
-        console.log('Socket connected, waiting for peer ID...');
-      });
-
-      socketRef.current.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
-      });
-
-      peerInstanceRef.current.on('open', id => {
-        console.log('My peer ID:', id);
-        setMyPeerId(id);
-        
-        // Only emit join-room if socket is connected
-        if (socketRef.current.connected) {
-          console.log('Socket connected, emitting join-room');
-          socketRef.current.emit('join-room', roomId, id, userName);
-        } else {
-          console.log('Socket not connected, waiting for connection...');
-          socketRef.current.once('connect', () => {
-            console.log('Socket connected, now emitting join-room');
-            socketRef.current.emit('join-room', roomId, id, userName);
-          });
-        }
-      });
-
-      // Pass socket instance up to parent component
-      setSocket(socketRef.current);
-  
-      // Handle user disconnections
-      socketRef.current.on('user-disconnected', userId => {
-        console.log('User disconnected:', userId);
-        setPeerStreams(prev => {
-          const newStreams = new Map(prev);
-          newStreams.delete(userId);
-          return newStreams;
-        });
-
-        setConnectedPeers(prev => {
-          const newPeers = new Set(prev);
-          newPeers.delete(userId);
-          return newPeers;
-        });
-      });
-
-      // Get initial camera stream
-      getCameraStream()
-        .then(stream => {
-          console.log('Got local media stream');
-          setLocalStream(stream);
-  
-          // Set initial track states
-          stream.getVideoTracks().forEach(track => {
-            track.enabled = isVideoEnabled;
-          });
-          stream.getAudioTracks().forEach(track => {
-            track.enabled = isAudioEnabled;
-          });
-  
-          // Answer incoming calls
-          peerInstanceRef.current.on('call', call => {
-            console.log('Incoming call from peer:', call.peer);
-            call.answer(stream);
-            
-            call.on('stream', remoteStream => {
-              console.log('Received remote stream from:', call.peer);
-              setPeerStreams(prev => {
-                const newStreams = new Map(prev);
-                newStreams.set(call.peer, remoteStream);
-                return newStreams;
-              });
-              setConnectedPeers(prev => new Set([...prev, call.peer]));
-            });
-  
-            call.on('close', () => {
-              console.log('Call closed with peer:', call.peer);
-              setPeerStreams(prev => {
-                const newStreams = new Map(prev);
-                newStreams.delete(call.peer);
-                return newStreams;
-              });
-              setConnectedPeers(prev => {
-                const newPeers = new Set(prev);
-                newPeers.delete(call.peer);
-                return newPeers;
-              });
-            });
-          });
-  
-          // Handle new user connections
-          console.log('Listening for user-connected events');
-          socketRef.current.on('user-connected', userId => {
-            console.log('New user connected:', userId);
-            const newUser = users.find(user => user.id === userId);
-            if (newUser) {
-              setNotification(`${newUser.name} joined`);
-              setTimeout(() => setNotification(''), 3000);
-            }
-            connectToNewUser(userId, stream);
-          });
-        })
-        .catch(error => {
-          console.error('Error accessing media devices:', error);
-          alert('Could not access camera or microphone. Please check permissions.');
-        });
-  
-      // Listen for room users updates
-      socketRef.current.on('room-users', (roomUsers) => {
-        console.log('Room users update received:', roomUsers);
-        
-        // Update transform data for new users
-        roomUsers.forEach(user => {
-          updateUserTransform(user.name, {
-            position: user.position,
-            rotation: user.rotation,
-            isWalking: user.isWalking
-          });
-        });
-
-
-        setUsers(roomUsers);
-
-        // Handle new peer connections
-        if (localStream) {
-          const currentPeers = new Set(connectedPeers);
-          const newPeers = roomUsers.filter(user => 
-            user.id !== myPeerId && !currentPeers.has(user.id)
-          );
-          
-          
-          newPeers.forEach(user => {
-            console.log('Connecting to new peer:', user.id);
-            connectToNewUser(user.id, localStream);
-          });
-        }
-      });
-  
-  
-  
-      // Listen for chat messages
-      socketRef.current.on('chat-message', (message) => {
-        setMessages(prev => [...prev, message]);
-        // Scroll to bottom on new message
-        setTimeout(() => {
-          if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-          }
-        }, 100);
-      });
-  
-      // Listen for chat history
-      socketRef.current.on('chat-history', (history) => {
-        setMessages(history);
-        // Scroll to bottom after loading history
-        setTimeout(() => {
-          if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-          }
-        }, 100);
-      });
-  
-      // Listen for user position/rotation updates
-      socketRef.current.on('user-transform', ({ userName, position, rotation, isWalking }) => {
-        updateUserTransform(userName, { position, rotation, isWalking });
-        
-        handleTransformUpdate(userName, {
-          position,
-          rotation,
-          isWalking: typeof isWalking === 'boolean' ? isWalking : undefined
-        });
-      });
-  
-      // Cleanup function
-      return () => {
-        console.log('Component unmounting - Cleaning up connections');
-        socketRef.current?.disconnect();
-        peerInstanceRef.current?.destroy();
-        
-        // Clean up all peer connections
-        setPeerStreams(new Map());
-        setConnectedPeers(new Set());
-        
-        // Stop all tracks in the local stream
-        if (localStream) {
-          localStream.getTracks().forEach(track => track.stop());
-        }
-        
-        // Clear animation states
-        animationStateRef.current.clear();
-      };
-    }, [roomId, userName, setSocket]);
-  
-    // Expose transform data to parent components
-    useEffect(() => {
-      const transformData = {};
-      transformDataRef.current.forEach((data, userName) => {
-        transformData[userName] = data;
-      });
-      window.transformData = transformData; // For debugging
-    }, []);
-  
-    // Function to connect to a new user
-    const connectToNewUser = (userId, stream) => {
-      // alert('new user:', userId);
-      console.log('Attempting to connect to new user:', userId);
-      try {
-        const call = peerInstanceRef.current.call(userId, stream);
-        
-        call.on('stream', remoteStream => {
-          console.log('Received stream from new user:', userId);
-          setPeerStreams(prev => {
-            const newStreams = new Map(prev);
-            newStreams.set(userId, remoteStream);
-            return newStreams;
-          });
-          setConnectedPeers(prev => new Set([...prev, userId]));
-        });
-  
-        call.on('close', () => {
-          console.log('Call closed with user:', userId);
-          setPeerStreams(prev => {
-            const newStreams = new Map(prev);
-            newStreams.delete(userId);
-            return newStreams;
-          });
-          setConnectedPeers(prev => {
-            const newPeers = new Set(prev);
-            newPeers.delete(userId);
-            return newPeers;
-          });
-        });
-      } catch (error) {
-        console.error('Error connecting to new user:', userId, error);
-      }
-    };
-  
-    const handleSendMessage = (e) => {
-      e.preventDefault();
-      if (newMessage.trim()) {
-        socketRef.current.emit('send-message', newMessage.trim());
-        setNewMessage('');
-      }
-    };
-  
-    const toggleVideo = () => {
-      if (localStream) {
-        const videoTracks = localStream.getVideoTracks();
-        videoTracks.forEach(track => {
-          track.enabled = !isVideoEnabled;
-        });
-        setIsVideoEnabled(!isVideoEnabled);
-      }
-    };
-  
-    const toggleAudio = () => {
-      if (localStream) {
-        const audioTracks = localStream.getAudioTracks();
-        audioTracks.forEach(track => {
-          track.enabled = !isAudioEnabled;
-        });
-        setIsAudioEnabled(!isAudioEnabled);
-      }
-    };
-  
-    useEffect(() => {
-      if (socketRef.current) {
-        socketRef.current.on('user-connected', (userId) => {
-          const newUser = users.find(user => user.id === userId);
-          if (newUser) {
-            setNotification(`${newUser.name} joined`);
-            setTimeout(() => setNotification(''), 3000);
-          }
-        });
-      }
-    }, [users]);
-  
-    return (
-      <div className="relative">
-        {notification && (
-          <div 
-            style={{
-              position: 'fixed',
-              top: '16px',
-              right: '16px',
-              backgroundColor: '#8ab4f8',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-              zIndex: 1000,
-              transition: 'opacity 0.3s ease-in-out',
-              opacity: notification ? 1 : 0,
-              pointerEvents: 'auto'
-            }}
-          >
-            {notification}
-          </div>
-        )}
-        <div style={{ 
-          position: 'fixed',
-          top: 50,
-          left: 120,  
+      {/* Right Sidebar - Logic to push content (flex) on Desktop */}
+      {showSidebar && (
+        <div style={{
+          width: isMobile ? '100%' : '360px',
           height: '100%',
-          pointerEvents: 'none'
+          backgroundColor: '#202124', // Dark Theme
+          borderLeft: '1px solid #333',
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: 3000,
+          position: isMobile ? 'absolute' : 'relative',
+          top: 0,
+          right: 0,
+          right: 0,
+          pointerEvents: 'auto',
+          boxShadow: isMobile ? '0 0 0 1000px rgba(0,0,0,0.5)' : 'none'
         }}>
-          {/* Header - Always visible */}
-          <div style={{ 
-            padding: '12px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            pointerEvents: 'auto'
-          }}>
-            <div style={{ fontSize: '1.25rem', color: 'white' }}>Room: {roomId}</div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              {currentView === 'video' && (
-                <>
-                  <button
-                    onClick={toggleVideo}
-                    style={{
-                      padding: '8px 8px',
-                      backgroundColor: isVideoEnabled ? '#3c4043' : '#ea4335',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span style={{ fontSize: '16px', lineHeight: 1 }}>
-                      {isVideoEnabled ? '📹' : '🚫'}
-                    </span>
-                    {isVideoEnabled ? 'Video On' : 'Video Off'}
-                  </button>
-                  <button
-                    onClick={toggleAudio}
-                    style={{
-                      padding: '8px 8px',
-                      backgroundColor: isAudioEnabled ? '#3c4043' : '#ea4335',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span style={{ fontSize: '16px', lineHeight: 1 }}>
-                      {isAudioEnabled ? '🎤' : '🔇'}
-                    </span>
-                    {isAudioEnabled ? 'Audio On' : 'Audio Off'}
-                  </button>
-                  <button
-                    onClick={isScreenSharing ? stopScreenShare : startScreenShare}
-                    style={{
-                      padding: '8px 8px',
-                      backgroundColor: isScreenSharing ? '#ea4335' : '#3c4043',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span style={{ fontSize: '16px', lineHeight: 1 }}>
-                      {isScreenSharing ? '🔴' : '💻'}
-                    </span>
-                    {isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
-                  </button>
-                </>
-              )}
-              <button
-                onClick={() => setIsParticipantsOpen(!isParticipantsOpen)}
-                style={{
-                  padding: '8px 8px',
-                  backgroundColor: isParticipantsOpen ? '#8ab4f8' : '#3c4043',
-                  color: isParticipantsOpen ? '#202124' : 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                People ({Array.from(connectedPeers).length + 1})
-              </button>
-              <button
-                onClick={() => setEnterAr(!enterAr)}
-                  style={{
-                    padding: '8px 8px',
-                    backgroundColor: isChatOpen ? '#8ab4f8' : '#3c4043',
-                    color: isChatOpen ? '#202124' : 'white',
-                    border: 'none',
-                    fontSize: '16px',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-              >
-                AR
-              </button>
-              <button
-                onClick={() => setIsChatOpen(!isChatOpen)}
-                style={{
-                  padding: '8px 8px',
-                  backgroundColor: isChatOpen ? '#8ab4f8' : '#3c4043',
-                  color: isChatOpen ? '#202124' : 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Chat
-              </button>
-              <button
-                onClick={() => toggleView()}
-                style={{
-                  padding: '8px 8px',
-                  backgroundColor: '#3c4043',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                {currentView === 'vr' ? 'Enter Video Chat' : 'Enter VR'}
-              </button>
-              <button
-                onClick={onLeaveRoom}
-                style={{
-                  padding: '8px 8px',
-                  backgroundColor: '#ea4335',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Leave
-              </button>
+          {/* Header */}
+          <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333' }}>
+            <h3 style={{ margin: 0, color: '#e8eaed', fontSize: '1.2rem' }}>People</h3>
+            <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', color: '#e8eaed', cursor: 'pointer' }}><Icons.Close stroke="white" /></button>
+          </div>
+
+          {/* Search */}
+          <div style={{ padding: '12px 20px' }}>
+            <div style={{ position: 'relative', background: '#333', borderRadius: '24px', padding: '10px 16px', display: 'flex', alignItems: 'center' }}>
+              <Icons.Search style={{ width: 18, height: 18, marginRight: '8px', opacity: 0.7 }} />
+              <input
+                type="text"
+                placeholder="Search for people"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '0.9rem', width: '100%', outline: 'none' }}
+              />
             </div>
           </div>
-  
-          {/* Main Content */}
-          <div style={{ 
-            display: 'flex',
-            position: 'relative',
-            height: 'calc(100%)',
-            pointerEvents: 'none'
-          }}>
-            {/* Video Grid - Only visible in video mode, positioned on the right */}
-            {currentView === 'video' && (
-              <VideoGrid
-                localStream={localStream}
-                peerStreams={peerStreams}
-                userName={userName}
-                isVideoEnabled={isVideoEnabled}
-                isAudioEnabled={isAudioEnabled}
-                users={users}
-                focusedVideo={focusedVideo}
-                setFocusedVideo={setFocusedVideo}
-              />
-            )}
-  
-            {/* Sidebars - Always visible if open */}
-            <div style={{ 
-              display: 'flex',
-              position: 'absolute',
-              right: 0,
-              height: '100%',
-              pointerEvents: 'auto'
-            }}>
-              {isParticipantsOpen && (
-                <div style={{
-                  width: '320px',
-                  height: 'calc(100vh - 160px)',
-                  borderLeft: '1px solid #3c4043',
-                  backgroundColor: 'rgba(32, 33, 36, 0.95)',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}>
-                  <div style={{ padding: '16px', borderBottom: '1px solid #3c4043' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.125rem', color: 'white' }}>People</h3>
-                  </div>
-                  <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
-                    {users.map(user => (
-                      <div 
-                        key={user.id}
-                        style={{
-                          padding: '12px',
-                          marginBottom: '8px',
-                          backgroundColor: '#303134',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          color: 'white'
-                        }}
-                      >
-                        <div style={{
-                          width: '32px',
-                          height: '32px',
-                          backgroundColor: '#8ab4f8',
-                          borderRadius: '50%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#202124',
-                          fontWeight: '500'
-                        }}>
-                          {user.name[0].toUpperCase()}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: user.id === myPeerId ? '500' : 'normal' }}>
-                            {user.name} {user.id === myPeerId && '(You)'}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+
+          {/* List */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
+            <p style={{ color: '#9aa0a6', fontSize: '0.8rem', fontWeight: 600, marginTop: '8px', marginBottom: '16px' }}>IN MEETING ({users.length + 1})</p>
+
+            {/* Me */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#8AB4F8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: '#202124' }}>
+                  {(userName || 'U')[0]}
                 </div>
-              )}
-  
-              {isChatOpen && (
-                <div style={{
-                  width: '320px',
-                  height: 'calc(100vh - 160px)',
-                  borderLeft: '1px solid #3c4043',
-                  backgroundColor: 'rgba(32, 33, 36, 0.95)',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}>
-                  <div style={{ padding: '16px', borderBottom: '1px solid #3c4043' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.125rem', color: 'white' }}>Chat</h3>
-                  </div>
-                  <div 
-                    ref={chatContainerRef}
-                    style={{ 
-                      flex: 1,
-                      overflow: 'auto',
-                      padding: '16px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px'
-                    }}
-                  >
-                    {messages.map((message, index) => (
-                      <ChatMessage 
-                        key={message.id || index}
-                        message={message}
-                        currentUserId={myPeerId}
-                      />
-                    ))}
-                  </div>
-                  <form 
-                    onSubmit={handleSendMessage}
-                    style={{ 
-                      padding: '16px',
-                      borderTop: '1px solid #3c4043',
-                      backgroundColor: 'rgba(32, 33, 36, 0.95)'
-                    }}
-                  >
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type a message..."
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        backgroundColor: '#303134',
-                        border: '1px solid #3c4043',
-                        borderRadius: '4px',
-                        color: 'white',
-                        fontSize: '0.875rem'
-                      }}
-                    />
-                  </form>
+                <div>
+                  <div style={{ color: '#e8eaed', fontWeight: 500 }}>{userName || 'You'} <span style={{ color: '#9aa0a6' }}>(You)</span></div>
                 </div>
-              )}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ color: isAudioEnabled ? '#e8eaed' : '#ea4335' }}>{isAudioEnabled ? <Icons.Mic style={{ width: 18 }} /> : <Icons.MicOff style={{ width: 18 }} />}</div>
+                <div style={{ color: isVideoEnabled ? '#e8eaed' : '#ea4335' }}>{isVideoEnabled ? <Icons.Video style={{ width: 18 }} /> : <Icons.VideoOff style={{ width: 18 }} />}</div>
+              </div>
             </div>
+
+            {/* Others */}
+            {filteredUsers.filter(u => u.id !== myPeerId).map(u => (
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#fb8c00', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: '#fff' }}>
+                    {(u.name || 'U')[0]}
+                  </div>
+                  <div>
+                    <div style={{ color: '#e8eaed', fontWeight: 500 }}>{u.name || 'Guest User'}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', color: '#e8eaed' }}>
+                  <Icons.MicOff style={{ width: 18, opacity: 0.5 }} />
+                  <Icons.VideoOff style={{ width: 18, opacity: 0.5 }} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
-    );
-  };
+      )}
+    </div>
+  );
+};
 
 export default VideoChat;

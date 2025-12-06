@@ -31,12 +31,16 @@ export default function Rig({ userName, socket, position, setPosition, isWalking
     const angleRad = THREE.MathUtils.degToRad(angleDeg);
     const now = Date.now();
     const shouldUpdate = socket && now - lastUpdateRef.current >= UPDATE_INTERVAL;
-    if (isWalking && !isColliding) {
+    if (isWalking) {
       const speed = 5;
-      const forward = new THREE.Vector3(0, 0, -1);
-      forward.applyQuaternion(camera.quaternion);
-      forward.y = 0; // Prevent vertical movement
-      if (forward.lengthSq() > 0) forward.normalize();
+
+      const cameraDirection = new THREE.Vector3();
+      camera.getWorldDirection(cameraDirection);
+
+      // Project direction onto XZ plane (ignore Y), then normalize
+      const forward = new THREE.Vector3(cameraDirection.x, 0, cameraDirection.z);
+      forward.normalize();
+
       // Only move if horizontal forward vector is significant
       if (forward.length() > 0.1) {
         const newX = rigRef.current.position.x + forward.x * speed * delta;
@@ -90,8 +94,12 @@ export default function Rig({ userName, socket, position, setPosition, isWalking
           ref={mobileControlsRef}
           enableZoom={false}
           enablePan={false}
-          enableDamping={false}
+          enableDamping={true}
+          dampingFactor={0.05}
           enableRotate={true}
+          minPolarAngle={Math.PI / 2} // prevent looking straight up
+          maxPolarAngle={Math.PI / 2} // prevent looking straight down
+          rotateSpeed={0.5}
           keys={{ LEFT: 'ArrowLeft', UP: 'ArrowUp', RIGHT: 'ArrowRight', BOTTOM: 'ArrowDown' }}
           touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
         />
