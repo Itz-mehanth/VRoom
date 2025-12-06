@@ -264,13 +264,14 @@ const VideoChat = ({
         setLocalStream(stream);
 
         const isProd = false; // Set to true for production URL logic if needed
-        const url = isProd ? 'https://vrroom-x6vw.onrender.com' : 'https://localhost:3001';
+        const hostname = window.location.hostname;
+        const url = isProd ? 'https://vrroom-x6vw.onrender.com' : `https://${hostname}:3001`;
 
         const socket = io(url, { secure: true, rejectUnauthorized: false });
         socketRef.current = socket;
         setSocket(socket);
 
-        const peer = new Peer(undefined, { host: isProd ? 'vrroom-x6vw.onrender.com' : 'localhost', port: isProd ? '443' : '3001', path: '/peerjs', secure: true });
+        const peer = new Peer(undefined, { host: isProd ? 'vrroom-x6vw.onrender.com' : hostname, port: isProd ? '443' : '3001', path: '/peerjs', secure: true });
         peerInstanceRef.current = peer;
 
         // --- Peer Listeners ---
@@ -428,21 +429,34 @@ const VideoChat = ({
               <VideoTile stream={featuredStream} isLocal={showLocalAsFeatured} userName={featuredName} isFocused={true} isAudioEnabled={true} onClick={() => setFocusedVideo(null)} />
             )}
             {currentView === 'video' && !showFeatured && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', padding: '64px 24px 100px', height: '100%', alignContent: 'center', overflowY: 'auto' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gap: '16px',
+                padding: '64px 24px 100px',
+                height: '100%',
+                alignContent: 'center',
+                overflowY: 'auto',
+                backgroundColor: '#131313' // Solid background to hide 3D scene
+              }}>
                 <VideoTile stream={localStream} isLocal={true} userName="You" isAudioEnabled={isAudioEnabled} error={cameraError} />
 
-                {Array.from(peerStreams.entries()).map(([peerId, stream]) => {
-                  const peerUser = users.find(u => u.id === peerId);
-                  return (
-                    <VideoTile
-                      key={peerId}
-                      stream={stream}
-                      userName={peerUser ? peerUser.name : 'User'}
-                      isLocal={false}
-                      isAudioEnabled={true}
-                    />
-                  );
-                })}
+                {Array.from(new Set([...users.map(u => u.id), ...peerStreams.keys()]))
+                  .filter(id => id !== myPeerId)
+                  .map(peerId => {
+                    const peerUser = users.find(u => u.id === peerId);
+                    const stream = peerStreams.get(peerId);
+                    return (
+                      <VideoTile
+                        key={peerId}
+                        stream={stream}
+                        userName={peerUser ? peerUser.name : 'Guest User'}
+                        isLocal={false}
+                        isAudioEnabled={true}
+                        error={stream ? null : 'Waiting for video...'}
+                      />
+                    );
+                  })}
               </div>
             )}
           </div>
@@ -543,65 +557,144 @@ const VideoChat = ({
         }}>
           {/* Header */}
           <div style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #333' }}>
-            <h3 style={{ margin: 0, color: '#e8eaed', fontSize: '1.2rem' }}>People</h3>
+            <h3 style={{ margin: 0, color: '#e8eaed', fontSize: '1.2rem' }}>Meeting Info</h3>
             <button onClick={() => setShowSidebar(false)} style={{ background: 'none', border: 'none', color: '#e8eaed', cursor: 'pointer' }}><Icons.Close stroke="white" /></button>
           </div>
 
-          {/* Search */}
-          <div style={{ padding: '12px 20px' }}>
-            <div style={{ position: 'relative', background: '#333', borderRadius: '24px', padding: '10px 16px', display: 'flex', alignItems: 'center' }}>
-              <Icons.Search style={{ width: 18, height: 18, marginRight: '8px', opacity: 0.7 }} />
-              <input
-                type="text"
-                placeholder="Search for people"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '0.9rem', width: '100%', outline: 'none' }}
-              />
-            </div>
+          {/* Tabs */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #333' }}>
+            <button
+              onClick={() => setActiveTab('people')}
+              style={{ flex: 1, padding: '12px', background: 'none', border: 'none', color: activeTab === 'people' ? '#8AB4F8' : '#aaa', borderBottom: activeTab === 'people' ? '2px solid #8AB4F8' : 'none', cursor: 'pointer', fontWeight: 600 }}
+            >
+              People ({users.length + 1})
+            </button>
+            <button
+              onClick={() => setActiveTab('chat')}
+              style={{ flex: 1, padding: '12px', background: 'none', border: 'none', color: activeTab === 'chat' ? '#8AB4F8' : '#aaa', borderBottom: activeTab === 'chat' ? '2px solid #8AB4F8' : 'none', cursor: 'pointer', fontWeight: 600 }}
+            >
+              Chat
+            </button>
           </div>
 
-          {/* List */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
-            <p style={{ color: '#9aa0a6', fontSize: '0.8rem', fontWeight: 600, marginTop: '8px', marginBottom: '16px' }}>IN MEETING ({users.length + 1})</p>
-
-            {/* Me */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#8AB4F8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: '#202124' }}>
-                  {(userName || 'U')[0]}
-                </div>
-                <div>
-                  <div style={{ color: '#e8eaed', fontWeight: 500 }}>{userName || 'You'} <span style={{ color: '#9aa0a6' }}>(You)</span></div>
+          {/* PEOPLE TAB */}
+          {activeTab === 'people' && (
+            <>
+              {/* Search */}
+              <div style={{ padding: '12px 20px' }}>
+                <div style={{ position: 'relative', background: '#333', borderRadius: '24px', padding: '10px 16px', display: 'flex', alignItems: 'center' }}>
+                  <Icons.Search style={{ width: 18, height: 18, marginRight: '8px', opacity: 0.7 }} />
+                  <input
+                    type="text"
+                    placeholder="Search people"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{ background: 'transparent', border: 'none', color: 'white', fontSize: '0.9rem', width: '100%', outline: 'none' }}
+                  />
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <div style={{ color: isAudioEnabled ? '#e8eaed' : '#ea4335' }}>{isAudioEnabled ? <Icons.Mic style={{ width: 18 }} /> : <Icons.MicOff style={{ width: 18 }} />}</div>
-                <div style={{ color: isVideoEnabled ? '#e8eaed' : '#ea4335' }}>{isVideoEnabled ? <Icons.Video style={{ width: 18 }} /> : <Icons.VideoOff style={{ width: 18 }} />}</div>
+
+              {/* List */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px' }}>
+                <p style={{ color: '#9aa0a6', fontSize: '0.8rem', fontWeight: 600, marginTop: '8px', marginBottom: '16px' }}>IN MEETING ({users.length + 1})</p>
+
+                {/* Me */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#8AB4F8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: '#202124' }}>
+                      {(userName || 'U')[0]}
+                    </div>
+                    <div>
+                      <div style={{ color: '#e8eaed', fontWeight: 500 }}>{userName || 'You'} <span style={{ color: '#9aa0a6' }}>(You)</span></div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ color: isAudioEnabled ? '#e8eaed' : '#ea4335' }}>{isAudioEnabled ? <Icons.Mic style={{ width: 18 }} /> : <Icons.MicOff style={{ width: 18 }} />}</div>
+                    <div style={{ color: isVideoEnabled ? '#e8eaed' : '#ea4335' }}>{isVideoEnabled ? <Icons.Video style={{ width: 18 }} /> : <Icons.VideoOff style={{ width: 18 }} />}</div>
+                  </div>
+                </div>
+
+                {/* Others */}
+                {filteredUsers.filter(u => u.id !== myPeerId).map(u => (
+                  <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#fb8c00', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: '#fff' }}>
+                        {(u.name || 'U')[0]}
+                      </div>
+                      <div>
+                        <div style={{ color: '#e8eaed', fontWeight: 500 }}>{u.name || 'Guest User'}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', color: '#e8eaed' }}>
+                      <Icons.MicOff style={{ width: 18, opacity: 0.5 }} />
+                      <Icons.VideoOff style={{ width: 18, opacity: 0.5 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* CHAT TAB */}
+          {activeTab === 'chat' && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div
+                ref={chatContainerRef}
+                style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column' }}
+              >
+                {messages.length === 0 && (
+                  <div style={{ color: '#aaa', textAlign: 'center', marginTop: '40px', fontStyle: 'italic' }}>
+                    No messages yet. Say hello!
+                  </div>
+                )}
+                {messages.map((msg, i) => (
+                  <ChatMessage key={i} message={msg} currentUserId={myPeerId || 'me'} />
+                ))}
+              </div>
+              <div style={{ padding: '16px', background: '#202124', borderTop: '1px solid #333' }}>
+                <form onSubmit={handleSendMessage} style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto',
+                  alignItems: 'center',
+                  background: '#333',
+                  borderRadius: '24px',
+                  padding: '4px 8px 4px 20px',
+                  width: '100%',
+                  boxSizing: 'border-box' // Ensure padding doesn't overflow width
+                }}>
+                  <input
+                    type="text"
+                    placeholder="Send a message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    style={{
+                      flex: 1,
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'white',
+                      outline: 'none',
+                      fontSize: '0.9rem',
+                      padding: '10px 0'
+                    }}
+                  />
+                  <button type="submit" style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#8AB4F8',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Icons.Send style={{ width: 20, height: 20 }} />
+                  </button>
+                </form>
               </div>
             </div>
-
-            {/* Others */}
-            {filteredUsers.filter(u => u.id !== myPeerId).map(u => (
-              <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#fb8c00', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold', color: '#fff' }}>
-                    {(u.name || 'U')[0]}
-                  </div>
-                  <div>
-                    <div style={{ color: '#e8eaed', fontWeight: 500 }}>{u.name || 'Guest User'}</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', color: '#e8eaed' }}>
-                  <Icons.MicOff style={{ width: 18, opacity: 0.5 }} />
-                  <Icons.VideoOff style={{ width: 18, opacity: 0.5 }} />
-                </div>
-              </div>
-            ))}
-          </div>
+          )}
         </div>
-      )}
-    </div>
+      )}  </div>
   );
 };
 

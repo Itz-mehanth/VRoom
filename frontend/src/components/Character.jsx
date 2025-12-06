@@ -4,10 +4,11 @@ import { useGLTF } from '@react-three/drei'
 // Adapted from Avatar.jsx but to be used as a controlled component
 const Character = forwardRef((props, ref) => {
     const { nodes, materials } = useGLTF('/models/character.glb')
+    console.log('Character Nodes:', Object.keys(nodes));
 
     return (
         <group ref={ref} {...props} dispose={null}>
-            <group rotation={[Math.PI / 2, Math.PI, 0]} position={[0, 0, 0]} scale={[0.3, 0.3, 0.3]}>
+            <group {...props} rotation={[-Math.PI / 2, 0, Math.PI]} dispose={null}>
                 <primitive object={nodes.Hips} />
                 <skinnedMesh
                     name="EyeLeft"
@@ -42,14 +43,19 @@ const Character = forwardRef((props, ref) => {
                     morphTargetInfluences={nodes.Wolf3D_Teeth.morphTargetInfluences}
                 />
                 <skinnedMesh
-                    geometry={nodes.Wolf3D_Hair.geometry}
-                    material={materials.Wolf3D_Hair}
-                    skeleton={nodes.Wolf3D_Hair.skeleton}
+                    geometry={nodes.Wolf3D_Facewear.geometry}
+                    material={materials.Wolf3D_Facewear}
+                    skeleton={nodes.Wolf3D_Facewear.skeleton}
                 />
                 <skinnedMesh
-                    geometry={nodes.Wolf3D_Body.geometry}
-                    material={materials.Wolf3D_Body}
-                    skeleton={nodes.Wolf3D_Body.skeleton}
+                    geometry={nodes.Wolf3D_Headwear.geometry}
+                    material={materials.Wolf3D_Headwear}
+                    skeleton={nodes.Wolf3D_Headwear.skeleton}
+                />
+                <skinnedMesh
+                    geometry={nodes.Wolf3D_Outfit_Top.geometry}
+                    material={materials.Wolf3D_Outfit_Top}
+                    skeleton={nodes.Wolf3D_Outfit_Top.skeleton}
                 />
                 <skinnedMesh
                     geometry={nodes.Wolf3D_Outfit_Bottom.geometry}
@@ -62,9 +68,9 @@ const Character = forwardRef((props, ref) => {
                     skeleton={nodes.Wolf3D_Outfit_Footwear.skeleton}
                 />
                 <skinnedMesh
-                    geometry={nodes.Wolf3D_Outfit_Top.geometry}
-                    material={materials.Wolf3D_Outfit_Top}
-                    skeleton={nodes.Wolf3D_Outfit_Top.skeleton}
+                    geometry={nodes.Wolf3D_Body.geometry}
+                    material={materials.Wolf3D_Body}
+                    skeleton={nodes.Wolf3D_Body.skeleton}
                 />
             </group>
         </group>

@@ -279,6 +279,7 @@ const FirstPersonController = forwardRef(
                 rotation: currentRotation,
                 isWalking: isWalking
             });
+            console.log('[FPC] Emitting transform:', { x: pos.x, y: pos.y, z: pos.z });
         };
 
         // --- Physics Loop ---

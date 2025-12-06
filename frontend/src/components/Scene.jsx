@@ -2,7 +2,7 @@ import React, { Suspense, useRef, useState, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 import { useAuth } from '../contexts/AuthContext';
 import { createPlantInstance, getAllPlantInstances } from '../services/plantService';
-import Avatar from './Avatar';
+import RemotePlayer from './RemotePlayer';
 import { Canvas } from '@react-three/fiber';
 import { Environment, Sky, PerspectiveCamera, Stats } from '@react-three/drei';
 import FirstPersonController from './FirstPersonController';
@@ -259,11 +259,18 @@ export default function Scene({
     if (!socket) return;
 
     const handleTransform = ({ userName: updatedUserName, position, rotation, isWalking }) => {
-      const userToUpdate = usersRef.current.find(u => u.name === updatedUserName);
+      console.log('[Scene] Received transform:', updatedUserName, position);
+      const userToUpdate = usersRef.current.find(u => u.name === updatedUserName || u.userId === updatedUserName);
+
       if (userToUpdate) {
-        userToUpdate.position = position;
+        // console.log('[Scene] Updating user:', userToUpdate.name);
+        // Ensure position is stored as [x, y, z] array to match RemotePlayer expectation
+        const newPos = Array.isArray(position) ? position : [position.x, position.y, position.z];
+        userToUpdate.position = newPos;
         userToUpdate.rotation = rotation;
         userToUpdate.isWalking = isWalking;
+      } else {
+        console.warn('[Scene] User not found for update:', updatedUserName, usersRef.current.map(u => u.name));
       }
     };
 
@@ -463,12 +470,10 @@ export default function Scene({
           {users.map((user) => {
             if (user.name === userName) return null;
             return (
-              <Avatar
+              <RemotePlayer
                 key={user.id}
-                position={user.position}
-                userName={user.name}
-                rotation={user.rotation}
-                isWalking={user.isWalking}
+                player={user}
+                playerId={user.id}
               />
             );
           })}

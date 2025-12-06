@@ -5,7 +5,7 @@ import axios from "axios";
 import RainEffect from "./RainEffect"; // <- your rain component
 import { RGBELoader } from "three-stdlib";
 import * as THREE from "three";
-import {useLoader} from "@react-three/fiber";
+import { useLoader } from "@react-three/fiber";
 import { DateTime } from "luxon";
 
 export default function RealtimeEnvironment({
@@ -23,8 +23,7 @@ export default function RealtimeEnvironment({
   const { scene } = useThree();
   const sunMeshRef = useRef();
   const [godRaysTarget, setGodRaysTarget] = useState(null);
-  const envRotation = useRef(0); // Add a ref to hold the rotation value
-  const envRef = useRef();
+  // Removed unused envRotation and envRef
   const texture = useLoader(RGBELoader, '/hdr/kloppenheim_03_puresky_1k.hdr');
 
   useEffect(() => {
@@ -59,10 +58,8 @@ export default function RealtimeEnvironment({
     }
   }, []);
 
-  // Animate a small drift for realism
-  useFrame((_, delta) => {
-    envRotation.current += delta * 0.01; // slow drift
-  });
+  // Removed unused useFrame for drift
+
 
   let cloudiness = 20, isRaining = false, isSnow = false, isThunder = false, temp = 25, hour;
 
@@ -160,22 +157,22 @@ export default function RealtimeEnvironment({
 
   let rotationY;
 
-  if(useRealtime){
+  if (useRealtime) {
     // Get the current time in the target timezone, including seconds and milliseconds
     const now = zoneName
       ? DateTime.now().setZone(zoneName)
       : DateTime.now();
-  
+
     // Calculate total seconds since midnight (unique for every second/millisecond)
     const millisecondsSinceMidnight =
-    now.hour * 3600 * 1000 +
-    now.minute * 60 * 1000 +
-    now.second * 1000 +
-    now.millisecond;
-  
+      now.hour * 3600 * 1000 +
+      now.minute * 60 * 1000 +
+      now.second * 1000 +
+      now.millisecond;
+
     // Fraction of the day (0 = midnight, 1 = next midnight)
-    rotationY = millisecondsSinceMidnight/ (Math.PI * 2 * 35000);
-  }else{
+    rotationY = millisecondsSinceMidnight / (Math.PI * 2 * 35000);
+  } else {
     rotationY = customEnv.hour
       ? (customEnv.hour / 32) * Math.PI * 2
       : 0;
@@ -192,7 +189,6 @@ export default function RealtimeEnvironment({
     <>
       {/* HDRI for photorealistic lighting */}
       <Environment
-        ref={envRef}
         background
         environmentIntensity={backgroundIntensity}
         backgroundIntensity={backgroundIntensity}
@@ -200,12 +196,12 @@ export default function RealtimeEnvironment({
         <color attach="background" args={['black']} />
         <mesh rotation={[0, rotationY, 0]} scale={100}>
           <sphereGeometry args={[1, 60, 40]} />
-          <meshBasicMaterial 
-            map={texture} 
-            side={THREE.BackSide} 
-            toneMapped={false} 
-            transparent 
-            opacity={1} 
+          <meshBasicMaterial
+            map={texture}
+            side={THREE.BackSide}
+            toneMapped={false}
+            transparent
+            opacity={1}
           />
         </mesh>
       </Environment>
