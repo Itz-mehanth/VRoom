@@ -303,6 +303,41 @@ const VideoChat = ({
         });
         peerInstanceRef.current = peer;
 
+        // --- Socket.IO Connection Debugging ---
+        socket.on('connect', () => {
+          console.log('[Socket] ✅ Connected to server');
+          console.log('[Socket] Socket ID:', socket.id);
+        });
+
+        socket.on('connect_error', (error) => {
+          console.error('[Socket] ❌ Connection error:', error.message);
+          console.error('[Socket] Error details:', error);
+        });
+
+        socket.on('disconnect', (reason) => {
+          console.warn('[Socket] ⚠️ Disconnected:', reason);
+          if (reason === 'io server disconnect') {
+            console.log('[Socket] Server disconnected, attempting reconnect...');
+            socket.connect();
+          }
+        });
+
+        socket.on('reconnect', (attemptNumber) => {
+          console.log('[Socket] 🔄 Reconnected after', attemptNumber, 'attempts');
+        });
+
+        socket.on('reconnect_attempt', (attemptNumber) => {
+          console.log('[Socket] 🔄 Reconnection attempt', attemptNumber);
+        });
+
+        socket.on('reconnect_error', (error) => {
+          console.error('[Socket] ❌ Reconnection error:', error.message);
+        });
+
+        socket.on('reconnect_failed', () => {
+          console.error('[Socket] ❌ Reconnection failed - giving up');
+        });
+
         // --- Peer Listeners ---
         peer.on('call', call => {
           console.log('[Peer] Received incoming call from:', call.peer);
@@ -315,14 +350,24 @@ const VideoChat = ({
           });
         });
 
+        peer.on('error', (error) => {
+          console.error('[Peer] ❌ Error:', error);
+        });
+
         peer.on('open', id => {
           console.log('[Peer] My ID:', id);
           setMyPeerId(id);
           // Only join room after Peer is ready AND we have stream
+          console.log('[Socket] Attempting to join room:', roomId, 'with ID:', id);
           if (socket.connected) {
+            console.log('[Socket] Socket already connected, joining room immediately');
             socket.emit('join-room', roomId, id, userName);
           } else {
-            socket.once('connect', () => socket.emit('join-room', roomId, id, userName));
+            console.log('[Socket] Socket not connected yet, waiting for connection...');
+            socket.once('connect', () => {
+              console.log('[Socket] Socket connected, now joining room');
+              socket.emit('join-room', roomId, id, userName);
+            });
           }
         });
 
