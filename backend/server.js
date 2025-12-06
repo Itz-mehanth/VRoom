@@ -26,6 +26,9 @@ app.use(cors({
 
 // ... (middleware) ...
 
+// Create HTTP server
+const server = require('http').Server(app);
+
 // Create Peer server
 const peerServer = ExpressPeerServer(server, {
   debug: !isProduction,
@@ -39,6 +42,9 @@ const peerServer = ExpressPeerServer(server, {
   }
 });
 
+// Mount PeerJS server
+app.use('/peerjs', peerServer);
+
 // ... (peerjs middleware) ...
 
 const io = socketIO(server, {
@@ -50,6 +56,8 @@ const io = socketIO(server, {
   },
   // ...
 });
+
+const rooms = new Map();
 
 // ...
 
@@ -81,7 +89,7 @@ io.on('connection', socket => {
     });
 
     // Broadcast to others that a user connected
-    socket.to(roomId).emit('user-connected', userId, userName);
+    socket.to(roomId).emit('user-connected', { userId, userName });
 
     // Send existing users to the new user
     // Convert Map values to Array
@@ -141,60 +149,61 @@ io.on('connection', socket => {
   });
 
   // ...
-});
-socket.on('disconnect', () => {
-  // Retrieve roomId from socket data since we are outside the closure
-  const roomId = socket.data.roomId;
+  // ...
+  socket.on('disconnect', () => {
+    // Retrieve roomId from socket data since we are outside the closure
+    const roomId = socket.data.roomId;
 
-  // Remove user from room
-  if (roomId && rooms.has(roomId)) {
-    // Find user by socket ID
-    let disconnectedUser = null;
-    let disconnectedUserId = null;
+    // Remove user from room
+    if (roomId && rooms.has(roomId)) {
+      // Find user by socket ID
+      let disconnectedUser = null;
+      let disconnectedUserId = null;
 
-    for (const [userId, user] of rooms.get(roomId).users.entries()) {
-      if (user.socketId === socket.id) {
-        disconnectedUser = user;
-        disconnectedUserId = userId;
-        break;
+      for (const [userId, user] of rooms.get(roomId).users.entries()) {
+        if (user.socketId === socket.id) {
+          disconnectedUser = user;
+          disconnectedUserId = userId;
+          break;
+        }
       }
-    }
 
-    if (disconnectedUser) {
-      rooms.get(roomId).users.delete(disconnectedUserId);
+      if (disconnectedUser) {
+        rooms.get(roomId).users.delete(disconnectedUserId);
 
-      console.log(`User disconnected - Room: ${roomId}`);
-      console.log(`Disconnected user: ${disconnectedUser.name} (${disconnectedUserId})`);
+        console.log(`User disconnected - Room: ${roomId}`);
+        console.log(`Disconnected user: ${disconnectedUser.name} (${disconnectedUserId})`);
 
-      // Send system message about user leaving
-      const leaveMessage = {
-        id: uuidV4(),
-        type: 'system',
-        content: `${disconnectedUser.name} left the room`,
-        timestamp: new Date().toISOString(),
-        userId: 'system'
-      };
-      rooms.get(roomId).messages.push(leaveMessage);
-      io.to(roomId).emit('chat-message', leaveMessage);
+        // Send system message about user leaving
+        const leaveMessage = {
+          id: uuidV4(),
+          type: 'system',
+          content: `${disconnectedUser.name} left the room`,
+          timestamp: new Date().toISOString(),
+          userId: 'system'
+        };
+        rooms.get(roomId).messages.push(leaveMessage);
+        io.to(roomId).emit('chat-message', leaveMessage);
 
-      // If room is empty, delete it
-      if (rooms.get(roomId).users.size === 0) {
-        rooms.delete(roomId);
-        console.log(`Room ${roomId} deleted - no users remaining`);
+        // If room is empty, delete it
+        if (rooms.get(roomId).users.size === 0) {
+          rooms.delete(roomId);
+          console.log(`Room ${roomId} deleted - no users remaining`);
+        } else {
+          // Update user list for remaining users
+          const updatedUsers = Array.from(rooms.get(roomId).users.values());
+          console.log('Remaining users in room:', updatedUsers);
+          io.to(roomId).emit('room-users', updatedUsers);
+        }
+
+        // Notify others
+        socket.to(roomId).emit('user-disconnected', { userId: disconnectedUserId, userName: disconnectedUser.name });
       } else {
-        // Update user list for remaining users
-        const updatedUsers = Array.from(rooms.get(roomId).users.values());
-        console.log('Remaining users in room:', updatedUsers);
-        io.to(roomId).emit('room-users', updatedUsers);
+        // Fallback if user not found but room exists
+        socket.to(roomId).emit('user-disconnected', { userId: 'unknown', userName: 'Unknown User' });
       }
-
-      // Notify others
-      socket.to(roomId).emit('user-disconnected', { userId: disconnectedUserId, userName: disconnectedUser.name });
-    } else {
-      // Fallback if user not found but room exists
-      socket.to(roomId).emit('user-disconnected', { userId: 'unknown', userName: 'Unknown User' });
     }
-  }
+  });
 
 
 

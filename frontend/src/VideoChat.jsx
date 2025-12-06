@@ -218,7 +218,14 @@ const VideoChat = ({
 
   const getCameraStream = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
+      });
       setCameraError(null);
       return stream;
     } catch (err) {
@@ -265,13 +272,18 @@ const VideoChat = ({
 
         const isProd = false; // Set to true for production URL logic if needed
         const hostname = window.location.hostname;
-        const url = isProd ? 'https://vrroom-x6vw.onrender.com' : `https://${hostname}:3001`;
+        const url = isProd ? 'https://vrroom-x6vw.onrender.com' : `http://${hostname}:3001`;
 
-        const socket = io(url, { secure: true, rejectUnauthorized: false });
+        const socket = io(url, { secure: isProd, rejectUnauthorized: false });
         socketRef.current = socket;
         setSocket(socket);
 
-        const peer = new Peer(undefined, { host: isProd ? 'vrroom-x6vw.onrender.com' : hostname, port: isProd ? '443' : '3001', path: '/peerjs', secure: true });
+        const peer = new Peer(undefined, {
+          host: isProd ? 'vrroom-x6vw.onrender.com' : hostname,
+          port: isProd ? '443' : '3001',
+          path: '/peerjs',
+          secure: isProd
+        });
         peerInstanceRef.current = peer;
 
         // --- Peer Listeners ---
@@ -300,9 +312,13 @@ const VideoChat = ({
         // --- Socket Listeners ---
         socket.on('user-connected', ({ userId, userName }) => {
           console.log('[Socket] User connected:', userId, userName);
-          const newUser = users.find(u => u.id === userId); // Note: users might be stale here, rely on passed name
-          const nameToShow = newUser ? newUser.name : userName;
-          setNotification(`${nameToShow || 'User'} joined`);
+
+          setUsers(prev => {
+            if (prev.find(u => u.userId === userId)) return prev;
+            return [...prev, { userId, name: userName, id: userId }]; // Add new user to state to trigger rendering
+          });
+
+          setNotification(`${userName || 'User'} joined`);
           setTimeout(() => setNotification(''), 3000);
 
           // Initiate call since we are the existing user
@@ -358,7 +374,7 @@ const VideoChat = ({
 
   // Filter users for search
   const [searchTerm, setSearchTerm] = useState('');
-  const filteredUsers = users.filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredUsers = users.filter(u => (u.name || '').toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100%', backgroundColor: 'transparent', overflow: 'hidden', pointerEvents: 'none', flexDirection: isMobile ? 'column' : 'row' }}>
@@ -551,7 +567,7 @@ const VideoChat = ({
           position: isMobile ? 'absolute' : 'relative',
           top: 0,
           right: 0,
-          right: 0,
+
           pointerEvents: 'auto',
           boxShadow: isMobile ? '0 0 0 1000px rgba(0,0,0,0.5)' : 'none'
         }}>

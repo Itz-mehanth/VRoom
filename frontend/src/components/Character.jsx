@@ -4,8 +4,6 @@ import { useGLTF } from '@react-three/drei'
 // Adapted from Avatar.jsx but to be used as a controlled component
 const Character = forwardRef((props, ref) => {
     const { nodes, materials } = useGLTF('/models/character.glb')
-    console.log('Character Nodes:', Object.keys(nodes));
-
     return (
         <group ref={ref} {...props} dispose={null}>
             <group {...props} rotation={[-Math.PI / 2, 0, Math.PI]} dispose={null}>

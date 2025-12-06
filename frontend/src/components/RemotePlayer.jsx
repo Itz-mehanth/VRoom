@@ -34,21 +34,34 @@ export default function RemotePlayer({ player, playerId }) {
 
     const isValidPlayerData = (playerData) => {
         if (!playerData) return false;
-        if (!playerData.position || !Array.isArray(playerData.position)) return false;
-        if (playerData.position.length !== 3) return false;
-        if (playerData.position.some(v => typeof v !== 'number' || isNaN(v))) return false;
-        return true;
+        if (!playerData.position) return false;
+
+        // Handle Array format
+        if (Array.isArray(playerData.position)) {
+            if (playerData.position.length !== 3) return false;
+            return !playerData.position.some(v => typeof v !== 'number' || isNaN(v));
+        }
+
+        // Handle Object format
+        if (typeof playerData.position === 'object') {
+            const { x, y, z } = playerData.position;
+            return typeof x === 'number' && typeof y === 'number' && typeof z === 'number';
+        }
+
+        return false;
     };
 
     const getSafePosition = (playerData) => {
         if (!isValidPlayerData(playerData)) {
             return [0, 0, 5];
         }
-        return [
-            playerData.position[0],
-            playerData.position[1],
-            playerData.position[2]
-        ];
+
+        const pos = playerData.position;
+        if (Array.isArray(pos)) {
+            return [pos[0], pos[1], pos[2]];
+        } else {
+            return [pos.x, pos.y, pos.z];
+        }
     };
 
     if (!player) {
@@ -136,11 +149,12 @@ export default function RemotePlayer({ player, playerId }) {
 
         try {
             // Check for position updates manually since player object reference might not change
-            const newPos = new Vector3(
-                player.position[0],
-                player.position[1],
-                player.position[2]
-            );
+            let newPos;
+            if (Array.isArray(player.position)) {
+                newPos = new Vector3(player.position[0], player.position[1], player.position[2]);
+            } else {
+                newPos = new Vector3(player.position.x, player.position.y, player.position.z);
+            }
 
             const distance = targetPosition.current.distanceTo(newPos);
             if (distance > 0.01) {
@@ -194,6 +208,8 @@ export default function RemotePlayer({ player, playerId }) {
         <group ref={groupRef} position={safePosition}>
             {/* Character component */}
             <Character ref={characterRef} scale={1.18} position={[0, 1, 0]} />
+
+
 
             {/* Show loading indicator only when not initialized */}
             {!isInitialized && (

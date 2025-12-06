@@ -458,6 +458,19 @@ export default function Scene({
             isMenuOpen={false}
           />
 
+          {usersRef.current.map((user) => {
+            // Don't render self as remote player if userId/name matches
+            if (user.userId === socket?.id || user.name === userName) return null;
+
+            return (
+              <RemotePlayer
+                key={user.userId || user.name}
+                player={user}
+                playerId={user.userId || user.name}
+              />
+            );
+          })}
+
           <CuboidCollider args={[1000, 1, 1000]} position={[0, -3, 0]} /> {/* Invisible Floor */}
 
           <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} />
