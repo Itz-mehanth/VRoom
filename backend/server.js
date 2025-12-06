@@ -54,7 +54,13 @@ const io = socketIO(server, {
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization", "Upgrade", "Connection"]
   },
-  // ...
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: WEBSOCKET_TIMEOUT,
+  pingInterval: WEBSOCKET_PING_INTERVAL,
+  connectTimeout: 10000,
+  upgradeTimeout: 10000,
+  maxHttpBufferSize: 1e8
 });
 
 const rooms = new Map();
