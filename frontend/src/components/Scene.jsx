@@ -431,7 +431,7 @@ export default function Scene({
       >
 
         <Stats />
-        <RealtimeEnvironment
+        {/* <RealtimeEnvironment
           lat={lat}
           lng={lng}
           position={position}
@@ -440,46 +440,19 @@ export default function Scene({
           onBackgroundIntensityChange={setBackgroundIntensity}
           localHour={localHour}
           zoneName={zoneName} // <-- pass the timezone name as a prop
-        />
+        /> */}
+
+        <Environment files={'/hdr/kloppenheim_03_puresky_1k.hdr'}/>
         <DragHandler
           draggedModel={draggedModel}
           canvasRef={canvasRef}
         />
-        <Sky intensity={0.1} sunPosition={sunPosition} turbidity={skyTurbidity} />
-
-        {/* Lighting Setup for Realistic Shadows */}
-        <directionalLight
-          position={[10, 20, 10]}
-          intensity={1.5}
-          castShadow
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-          shadow-camera-far={100}
-          shadow-camera-left={-50}
-          shadow-camera-right={50}
-          shadow-camera-top={50}
-          shadow-camera-bottom={-50}
-          shadow-bias={-0.0001}
-        />
-        <directionalLight
-          position={[-5, 10, -5]}
-          intensity={0.3}
-          color="#b0c4de"
-        />
-        <ambientLight intensity={0.4} />
-        <hemisphereLight
-          skyColor="#87ceeb"
-          groundColor="#362907"
-          intensity={0.5}
-        />
-        <pointLight position={[0, 10, 0]} intensity={0.3} distance={50} decay={2} />
-
-
+  
 
         <Physics gravity={[0, -9.81, 0]}>
           <FirstPersonController
             ref={controllerRef}
-            startPosition={[position.x, position.y + 5, position.z]} // Start slightly higher to avoid floor clip
+            startPosition={[position.x, position.y, position.z - 2]} // Start slightly higher to avoid floor clip
             socket={socket}
             userName={userName}
             isMobile={isMobile}
