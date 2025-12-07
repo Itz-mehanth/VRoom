@@ -7,7 +7,7 @@ import { EffectComposer, RenderPass, UnrealBloomPass, ShaderPass } from 'three-s
 import { GammaCorrectionShader } from 'three-stdlib';
 
 extend({ EffectComposer, RenderPass, UnrealBloomPass, ShaderPass });
-import { Environment, Sky, PerspectiveCamera, Stats, PerformanceMonitor, AdaptiveDpr, AdaptiveEvents } from '@react-three/drei';
+import { Environment, Sky, PerspectiveCamera, Stats, PerformanceMonitor, AdaptiveDpr, AdaptiveEvents, BakeShadows, Bvh, Preload } from '@react-three/drei';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import { Joystick } from "react-joystick-component";
 import { Leva, useControls } from 'leva';
@@ -67,7 +67,7 @@ export const DragHandler = ({
   canvasRef,
   currentUser,
 }) => {
-  const { camera } = useThree();
+  const { camera, gl } = useThree();
 
   useEffect(() => {
     const canvasElement = canvasRef.current;
@@ -156,6 +156,10 @@ export const DragHandler = ({
               }
             ]);
           }
+
+          // Smart Shadow Update: Briefly re-enable shadow map updating to catch the new object
+          // forcing a single frame update for static shadows
+          gl.shadowMap.needsUpdate = true;
         } catch (error) {
           console.error('[DragHandler] Failed to plant:', error);
           alert('Failed to plant: ' + error.message);
@@ -469,6 +473,8 @@ export default function Scene({
         <PerformanceMonitor onDecline={() => setDpr(0.5)} onIncline={() => setDpr(1.5)} />
         <AdaptiveDpr pixelated />
         <AdaptiveEvents />
+        <BakeShadows />
+        <Preload all />
         {/* <RealtimeEnvironment
           lat={lat}
           lng={lng}
@@ -649,86 +655,88 @@ export default function Scene({
         />
 
 
-        <Physics gravity={[0, -9.81, 0]}>
-          <FirstPersonController
-            ref={controllerRef}
-            startPosition={[position.x, position.y, position.z - 2]} // Start slightly higher to avoid floor clip
-            socket={socket}
-            userName={userName}
-            isMobile={isMobile}
-            isFirstPerson={isFirstPerson}
-            aimActiveRef={{ current: false }} // Stub
-            joystickDataRef={joystickDataRef}
-            isMenuOpen={false}
-          />
+        <Bvh firstHitOnly>
+          <Physics gravity={[0, -9.81, 0]}>
+            <FirstPersonController
+              ref={controllerRef}
+              startPosition={[position.x, position.y, position.z - 2]} // Start slightly higher to avoid floor clip
+              socket={socket}
+              userName={userName}
+              isMobile={isMobile}
+              isFirstPerson={isFirstPerson}
+              aimActiveRef={{ current: false }} // Stub
+              joystickDataRef={joystickDataRef}
+              isMenuOpen={false}
+            />
 
-          {usersRef.current.map((user) => {
-            // Don't render self as remote player if userId/name matches
-            if (user.userId === socket?.id || user.name === userName) return null;
+            {usersRef.current.map((user) => {
+              // Don't render self as remote player if userId/name matches
+              if (user.userId === socket?.id || user.name === userName) return null;
 
-            return (
-              <RemotePlayer
-                key={user.userId || user.name}
-                player={user}
-                playerId={user.userId || user.name}
+              return (
+                <RemotePlayer
+                  key={user.userId || user.name}
+                  player={user}
+                  playerId={user.userId || user.name}
+                />
+              );
+            })}
+
+            <CuboidCollider args={[1000, 1, 1000]} position={[0, -3, 0]} /> {/* Invisible Floor */}
+
+            {/* Visible ground plane for shadow receiving */}
+            <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.99, 0]}>
+              <planeGeometry args={[2000, 2000]} />
+              <meshStandardMaterial
+                color="#4a5f3a"
+                roughness={0.8}
+                metalness={0.1}
               />
-            );
-          })}
+            </mesh>
 
-          <CuboidCollider args={[1000, 1, 1000]} position={[0, -3, 0]} /> {/* Invisible Floor */}
-
-          {/* Visible ground plane for shadow receiving */}
-          <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.99, 0]}>
-            <planeGeometry args={[2000, 2000]} />
-            <meshStandardMaterial
-              color="#4a5f3a"
-              roughness={0.8}
-              metalness={0.1}
-            />
-          </mesh>
-
-          {/* <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} /> */}
-          {heldItem && (
-            <HeldItem
-              item={heldItem}
-              waterCapacity={waterJugCapacity}
-            />
-          )}
-          {users.map((user) => {
-            if (user.name === userName) return null;
-            return (
-              <RemotePlayer
-                key={user.id}
-                player={user}
-                playerId={user.id}
+            {/* <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} /> */}
+            {heldItem && (
+              <HeldItem
+                item={heldItem}
+                waterCapacity={waterJugCapacity}
               />
-            );
-          })}
+            )}
+            {users.map((user) => {
+              if (user.name === userName) return null;
+              return (
+                <RemotePlayer
+                  key={user.id}
+                  player={user}
+                  playerId={user.id}
+                />
+              );
+            })}
 
-          <ProceduralTerrain
-            bbox={memoizedBBox}
-            position={memoizedInitPosition}
-            envIntensity={backgroundIntensity}
-          />
-          <Garden scale={2} position={[0, 2, 0]} onSelect={setSelectedModel} />
-
-          {placedModels.map((model) => (
-            <DroppedModel
-              plantId={model.plantId}
-              instanceId={model.instanceId}
-              key={model.instanceId}
-              modelPath={model.modelPath}
-              position={model.position || [0, 0, 0]}
-              name={model.name}
-              description={model.description}
-              onPositionChange={(newPosition) => handleModelPositionChange(model.id, newPosition)}
-              setSelectedModel={setSelectedModel}
-              setSelectedModelDetails={setSelectedModelDetails}
-              heldItem={heldItem}
-              feedPlant={feedPlant}
+            <ProceduralTerrain
+              bbox={memoizedBBox}
+              position={memoizedInitPosition}
+              envIntensity={backgroundIntensity}
             />
-          ))}
-        </Physics>
+            <Garden scale={2} position={[0, 2, 0]} onSelect={setSelectedModel} />
+
+            {placedModels.map((model) => (
+              <DroppedModel
+                plantId={model.plantId}
+                instanceId={model.instanceId}
+                key={model.instanceId}
+                modelPath={model.modelPath}
+                position={model.position || [0, 0, 0]}
+                name={model.name}
+                description={model.description}
+                onPositionChange={(newPosition) => handleModelPositionChange(model.id, newPosition)}
+                setSelectedModel={setSelectedModel}
+                setSelectedModelDetails={setSelectedModelDetails}
+                heldItem={heldItem}
+                feedPlant={feedPlant}
+              />
+            ))}
+          </Physics>
+        </Bvh>
 
         {/* Manual Post-Processing */}
         {/* <Effects /> */}

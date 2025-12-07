@@ -1,5 +1,5 @@
 import React, { useRef, forwardRef, useEffect, useMemo } from 'react'
-import { Billboard, Cylinder, Sphere, Text, useGLTF } from '@react-three/drei'
+import { Billboard, Cylinder, Sphere, Text, useGLTF, Instances, Instance } from '@react-three/drei'
 import { Plant } from './Plant'
 import { RigidBody, CuboidCollider } from '@react-three/rapier'
 import * as THREE from 'three'
@@ -7,10 +7,7 @@ import * as THREE from 'three'
 const TubeLight = React.memo(({ position }) => (
   <group position={position}>
     <pointLight intensity={0.1} distance={3} color="#7cdaffff" decay={2} />
-    <mesh rotation={[Math.PI / 2, 0, 0]}>
-      <cylinderGeometry args={[0.008, 0.008, 0.2, 16]} />
-      <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={5} toneMapped={false} />
-    </mesh>
+    <Instance rotation={[Math.PI / 2, 0, 0]} />
   </group>
 ));
 
@@ -29,7 +26,10 @@ const Garden = forwardRef(({ onSelect, ...props }, ref) => {
   };
 
   return (
-    <>
+    <Instances range={100}>
+      <cylinderGeometry args={[0.008, 0.008, 0.2, 16]} />
+      <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={5} toneMapped={false} />
+
       {/* Visual Garden - no physics */}
       <group ref={ref} {...props} dispose={null}>
         <Billboard position={[0, 25, 0]}>
@@ -3507,7 +3507,7 @@ const Garden = forwardRef(({ onSelect, ...props }, ref) => {
           />
         </group>
       </group>
-    </>
+    </Instances>
   )
 })
 
