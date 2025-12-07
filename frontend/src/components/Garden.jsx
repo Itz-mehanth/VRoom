@@ -6,6 +6,7 @@ import * as THREE from 'three'
 
 const TubeLight = React.memo(({ position }) => (
   <group position={position}>
+    <pointLight intensity={0.1} distance={3} color="#7cdaffff" decay={2} />
     <mesh rotation={[Math.PI / 2, 0, 0]}>
       <cylinderGeometry args={[0.008, 0.008, 0.2, 16]} />
       <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={5} toneMapped={false} />
@@ -13,9 +14,19 @@ const TubeLight = React.memo(({ position }) => (
   </group>
 ));
 
-const Garden = forwardRef((props, ref) => {
+const Garden = forwardRef(({ onSelect, ...props }, ref) => {
   const { nodes, materials } = useGLTF('/models/environment.glb')
   const collider = useGLTF('/models/garden_collider.glb')
+
+  const handlePlantClick = () => {
+    if (onSelect) {
+      onSelect({
+        name: 'Garden Plant',
+        description: 'A thriving green plant growing in the hydroponic rack.',
+        modelPath: '/models/plantpot.glb'
+      });
+    }
+  };
 
   return (
     <>
@@ -33,97 +44,97 @@ const Garden = forwardRef((props, ref) => {
 
         {/* Plant pots on the racks */}
         <group>
-          <group position={[1.33, -0.5, -0.27]}>
+          {/* <group position={[1.33, -0.5, -0.27]}>
             <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
             <group position={[0.08, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
           </group>
           <group position={[1.33, -0.5, 0.01]}>
             <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
             <group position={[0.08, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
-          </group>
+          </group> */}
           <group position={[1.33, -0.5, 0.26]}>
             <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
             <group position={[0.08, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
           </group>
           <group position={[1.33, -0.5, 0.53]}>
             <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
             <group position={[0.08, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
           </group>
-          <group position={[1.33, -0.5, 0.82]}>
+          {/* <group position={[1.33, -0.5, 0.82]}>
             <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
             <group position={[0.08, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
           </group>
           <group position={[1.33, -0.5, 1.1]}>
             <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
             <group position={[0.08, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
           </group>
           <group position={[1.33, -0.5, 1.39]}>
             <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
             <group position={[0.08, 0, 0]}>
-              <Plant position={[0, 0, 0]} />
-              <Plant position={[0, 0, 0.08]} />
-              <Plant position={[0, 0, 0.16]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.08]} />
+              <Plant onClick={handlePlantClick} position={[0, 0, 0.16]} />
             </group>
-          </group>
+          </group> */}
         </group>
 
         <mesh

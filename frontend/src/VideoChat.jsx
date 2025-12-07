@@ -578,39 +578,39 @@ const VideoChat = ({
           alignItems: 'center'
         }}>
           <button onClick={() => setIsAudioEnabled(!isAudioEnabled)} style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: isAudioEnabled ? '#3C4043' : '#ea4335', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {isAudioEnabled ? <Icons.Mic /> : <Icons.MicOff />}
+            {isAudioEnabled ? <Icons.Mic color="white" size={20} /> : <Icons.MicOff color="white" size={20} />}
           </button>
           <button onClick={() => setIsVideoEnabled(!isVideoEnabled)} style={{ width: 44, height: 44, borderRadius: '50%', border: 'none', background: isVideoEnabled ? '#3C4043' : '#ea4335', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {isVideoEnabled ? <Icons.Video /> : <Icons.VideoOff />}
+            {isVideoEnabled ? <Icons.Video color="white" size={20} /> : <Icons.VideoOff color="white" size={20} />}
           </button>
 
           <div style={{ width: 1, height: 24, background: '#555', margin: '0 8px' }} />
 
           <button onClick={() => setIsScreenSharing(!isScreenSharing)} style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: isScreenSharing ? '#8AB4F8' : '#3C4043', color: isScreenSharing ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icons.ScreenShare stroke={isScreenSharing ? '#202124' : 'white'} />
+            <Icons.ScreenShare color={isScreenSharing ? '#202124' : 'white'} size={20} />
           </button>
 
           <button onClick={() => { if (currentView !== 'vr') toggleView(); }} title="Enter VR Mode" style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: currentView === 'vr' ? '#8AB4F8' : '#3C4043', color: currentView === 'vr' ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icons.Vr stroke={currentView === 'vr' ? '#202124' : 'white'} />
+            <Icons.Vr color={currentView === 'vr' ? '#202124' : 'white'} size={20} />
           </button>
 
           <button onClick={() => setEnterAr(!enterAr)} title="Enter AR Mode" style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: enterAr ? '#8AB4F8' : '#3C4043', color: enterAr ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icons.AR stroke={enterAr ? '#202124' : 'white'} />
+            <Icons.AR color={enterAr ? '#202124' : 'white'} size={20} />
           </button>
 
           <button onClick={() => setShowSidebar(!showSidebar)} style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: showSidebar ? '#8AB4F8' : '#3C4043', color: showSidebar ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icons.Chat stroke={showSidebar ? '#013ef7ff' : 'white'} />
+            <Icons.Chat color={showSidebar ? '#013ef7ff' : 'white'} size={20} />
           </button>
 
           <button onClick={() => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }} style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: '#3C4043', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icons.Fullscreen />
+            <Icons.Fullscreen color="white" size={20} />
           </button>
 
           <div style={{ width: 1, height: 24, background: '#555', margin: '0 8px' }} />
 
           <button onClick={onLeaveRoom} style={{ padding: '0 24px', height: 44, borderRadius: '24px', border: 'none', background: '#ea4335', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icons.Hangup style={{ marginRight: 8 }} />
-            <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>End Call</span>
+            <Icons.Hangup color="white" size={20} style={{ marginRight: 8 }} />
+            <span style={{ fontSize: '0.95rem', fontWeight: 600 }}>End</span>
           </button>
         </div>
 

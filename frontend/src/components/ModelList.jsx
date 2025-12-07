@@ -1,33 +1,8 @@
 import React, { Suspense, useRef, useEffect, useState } from 'react';
 import { collection, getDocs, doc, getDoc, collectionGroup } from 'firebase/firestore';
 import { db } from '../Firebase';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import { useLoader } from '@react-three/fiber';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-// Separate component for the 3D model preview
-const ModelPreview = ({ modelPath }) => {
-  const gltf = useLoader(GLTFLoader, modelPath);
-  const modelRef = useRef();
-  const [modelClone, setModelClone] = useState(null);
-
-  // Create a clone of the model when it's loaded
-  useEffect(() => {
-    if (gltf) {
-      const clone = gltf.scene.clone();
-      setModelClone(clone);
-    }
-  }, [gltf]);
-
-  if (!modelClone) return null;
-
-  return (
-    <mesh ref={modelRef} rotation={[0, 0, 0]} scale={[1, 1, 1]}>
-      <primitive object={modelClone} />
-    </mesh>
-  );
-};
+// 3D Preview removed for performance (Context Lost prevention)
+// render static thumbnails instead
 
 async function loadPlants() {
   try {
@@ -209,26 +184,7 @@ const ModelList = ({
 
   return (
     <>
-      <div style={{ ...buttonStyle(isPlantListOpen), left: '150px' }} onClick={(e) => {
-        e.stopPropagation();
-        onPlantToggle();
-      }}>
-        <span style={{ fontSize: '1.2em', lineHeight: 1 }}>🪴</span>
-      </div>
-
-      <div style={{ ...buttonStyle(isFertilizerListOpen), left: '220px' }} onClick={(e) => {
-        e.stopPropagation();
-        onFertilizerToggle();
-      }}>
-        <span style={{ fontSize: '1.2em', lineHeight: 1 }}>🧃</span>
-      </div>
-
-      <div style={{ ...buttonStyle(isAssetListOpen), left: '290px' }} onClick={(e) => {
-        e.stopPropagation();
-        onAssetToggle();
-      }}>
-        <span style={{ fontSize: '1.2em', lineHeight: 1 }}>💧</span>
-      </div>
+      {/* Buttons moved to VRUI.jsx - Logic handled via props */}
 
       {(isPlantListOpen || isFertilizerListOpen || isAssetListOpen) && (
         <div
@@ -275,14 +231,17 @@ const ModelList = ({
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Canvas camera={{ position: [0, 0, 2], fov: 50 }} style={{ background: 'transparent' }}>
-                    <OrbitControls autoRotate autoRotateSpeed={15} enableZoom={false} enablePan={false} />
-                    <ambientLight intensity={0.8} />
-                    <pointLight position={[10, 10, 10]} intensity={1} />
-                    <Suspense fallback={null}>
-                      <ModelPreview modelPath={plant.stages[0].modelPath} />
-                    </Suspense>
-                  </Canvas>
+                  <img
+                    src={plant.thumbnail}
+                    alt={plant.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))'
+                    }}
+                    draggable={false}
+                  />
                 </div>
               </div>
             ))}
@@ -305,14 +264,17 @@ const ModelList = ({
                     handleItemClick(fertilizer, 'fertilizer');
                   }}
                 >
-                  <Canvas camera={{ position: [0, 0, 2], fov: 50 }} style={{ background: 'transparent' }}>
-                    <OrbitControls autoRotate autoRotateSpeed={15} enableZoom={false} enablePan={false} />
-                    <ambientLight intensity={0.8} />
-                    <pointLight position={[10, 10, 10]} intensity={1} />
-                    <Suspense fallback={null}>
-                      <ModelPreview modelPath={fertilizer.modelPath} />
-                    </Suspense>
-                  </Canvas>
+                  <img
+                    src={fertilizer.thumbnail}
+                    alt={fertilizer.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))'
+                    }}
+                    draggable={false}
+                  />
                 </div>
               </div>
             ))}
@@ -335,14 +297,17 @@ const ModelList = ({
                     handleItemClick(asset, 'asset');
                   }}
                 >
-                  <Canvas camera={{ position: [0, 0, 2], fov: 50 }} style={{ background: 'transparent' }}>
-                    <OrbitControls autoRotate autoRotateSpeed={15} enableZoom={false} enablePan={false} />
-                    <ambientLight intensity={0.8} />
-                    <pointLight position={[10, 10, 10]} intensity={1} />
-                    <Suspense fallback={null}>
-                      <ModelPreview modelPath={asset.modelPath} />
-                    </Suspense>
-                  </Canvas>
+                  <img
+                    src={asset.thumbnail}
+                    alt={asset.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))'
+                    }}
+                    draggable={false}
+                  />
                 </div>
               </div>
             ))}

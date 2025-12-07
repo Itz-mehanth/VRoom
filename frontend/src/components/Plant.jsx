@@ -3,12 +3,12 @@ import { useGLTF } from '@react-three/drei'
 import { SkeletonUtils } from 'three-stdlib'
 
 const TubeLight = ({ position }) => (
-  <group position={position}>
-    <mesh rotation={[Math.PI / 2, 0, 0]}>
-      <cylinderGeometry args={[0.15, 0.15, 1.2, 16]} />
-      <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={5} toneMapped={false} />
-    </mesh>
-  </group>
+    <group position={position}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.15, 0.15, 1.2, 16]} />
+            <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={5} toneMapped={false} />
+        </mesh>
+    </group>
 );
 
 export function Plant(props) {
@@ -31,7 +31,14 @@ export function Plant(props) {
     }, [scene])
 
     return <>
-    <primitive object={clone} {...props} />
+        <primitive
+            object={clone}
+            {...props}
+            onClick={(e) => {
+                e.stopPropagation();
+                props.onClick && props.onClick();
+            }}
+        />
     </>
 }
 

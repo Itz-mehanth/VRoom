@@ -241,6 +241,7 @@ export default function VRScene({
               userName={userName}
               socket={socket}
               users={users}
+              isMarketplaceOpen={rest.isMarketplaceOpen}
               waterInHand={waterInHand}
               setWaterInHand={setWaterInHand}
               fertilizerInHand={fertilizerInHand}
@@ -291,6 +292,7 @@ export default function VRScene({
             waterInHand={waterInHand}
             fertilizerInHand={fertilizerInHand}
             enterAr={enterAr}
+            onOpenMarketplace={rest.onOpenMarketplace}
           />
         </>
       }

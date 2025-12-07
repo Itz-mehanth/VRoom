@@ -8,6 +8,8 @@ import ARPage from './components/ARPage';
 import { useLocation } from "react-router-dom";
 import { localToGeo, geoToLocal } from './geoUtils';
 import Profile from './components/Profile';
+import PlantDetailsHUD from './components/PlantDetailsHUD';
+import PlantMarketplace from './components/PlantMarketplace';
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -193,6 +195,10 @@ const Room = () => {
   };
 
 
+  const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
+
+  // ... (rest of state)
+
   // Toggle view
   const toggleView = () => {
     setCurrentView(prev => prev === 'vr' ? 'video' : 'vr');
@@ -210,6 +216,13 @@ const Room = () => {
 
   return (
     <div style={{ width: '100vw', height: '100dvh', position: 'relative', overflow: 'hidden', margin: 0, padding: 0 }}>
+      {/* Marketplace Overlay */}
+      {isMarketplaceOpen && (
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 5000 }}>
+          <PlantMarketplace onClose={() => setIsMarketplaceOpen(false)} />
+        </div>
+      )}
+
       {!enterAr &&
         <>
           <div style={{
@@ -267,6 +280,8 @@ const Room = () => {
               handleModelPositionChange={handleModelPositionChange}
               refillResourceFromAdvice={refillResourceFromAdvice}
               feedPlant={feedPlant}
+              onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+              isMarketplaceOpen={isMarketplaceOpen}
             />
           </div>
         </>
@@ -337,6 +352,11 @@ const Room = () => {
           onLeaveRoom={handleLeaveRoom}
         />
       </div>
+
+      <PlantDetailsHUD
+        selectedModel={selectedModel}
+        onClose={() => setSelectedModel(null)}
+      />
     </div>
   );
 };

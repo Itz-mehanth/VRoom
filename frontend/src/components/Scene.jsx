@@ -7,7 +7,7 @@ import { EffectComposer, RenderPass, UnrealBloomPass, ShaderPass } from 'three-s
 import { GammaCorrectionShader } from 'three-stdlib';
 
 extend({ EffectComposer, RenderPass, UnrealBloomPass, ShaderPass });
-import { Environment, Sky, PerspectiveCamera, Stats, PerformanceMonitor } from '@react-three/drei';
+import { Environment, Sky, PerspectiveCamera, Stats, PerformanceMonitor, AdaptiveDpr, AdaptiveEvents } from '@react-three/drei';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import { Joystick } from "react-joystick-component";
 import { Leva, useControls } from 'leva';
@@ -228,6 +228,7 @@ export default function Scene({
   refillResourceFromAdvice,
   isPointerLocked,
   setIsPointerLocked,
+  isMarketplaceOpen,
 }) {
 
   const canvasRef = useRef();
@@ -243,7 +244,7 @@ export default function Scene({
     initXZ[2]
   ]
 
-  const checkMobile = () => /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 1024;
+  const checkMobile = () => /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 512;
 
   const [isMobile, setIsMobile] = useState(checkMobile());
   const [isLandscape, setIsLandscape] = useState(window.innerWidth > window.innerHeight);
@@ -444,6 +445,7 @@ export default function Scene({
     <>
       <Leva hidden />
       <Canvas
+        frameloop={isMarketplaceOpen ? "never" : "always"}
         shadows="soft"
         dpr={dpr}
         ref={canvasRef}
@@ -465,6 +467,8 @@ export default function Scene({
 
         <Stats />
         <PerformanceMonitor onDecline={() => setDpr(0.5)} onIncline={() => setDpr(1.5)} />
+        <AdaptiveDpr pixelated />
+        <AdaptiveEvents />
         {/* <RealtimeEnvironment
           lat={lat}
           lng={lng}
@@ -488,13 +492,13 @@ export default function Scene({
             rotation={[Math.PI / 2, 0, 0]}
             color={'white'}
             castShadow
-            shadow-mapSize-width={1024}
-            shadow-mapSize-height={1024}
-            shadow-camera-far={60}
-            shadow-camera-left={-60}
-            shadow-camera-right={60}
-            shadow-camera-top={60}
-            shadow-camera-bottom={-60}
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
             shadow-bias={-0.0001}
           />
           <directionalLight
@@ -502,6 +506,15 @@ export default function Scene({
             intensity={1}
             rotation={[Math.PI / 2, 0, 0]}
             color={'white'}
+            castShadow
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
+            shadow-bias={-0.0001}
           />
         </group>
         <group>
@@ -510,12 +523,30 @@ export default function Scene({
             intensity={1}
             rotation={[Math.PI / 2, 0, 0]}
             color={'white'}
+            castShadow
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
+            shadow-bias={-0.0001}
           />
           <directionalLight
             position={[8, 15, 0]}
             intensity={1}
             rotation={[Math.PI / 2, 0, 0]}
             color={'white'}
+            castShadow
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
+            shadow-bias={-0.0001}
           />
         </group>
         <group>
@@ -524,11 +555,29 @@ export default function Scene({
             intensity={1}
             rotation={[0, 0, 0]}
             color={'white'}
+            castShadow
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
+            shadow-bias={-0.0001}
           />
           <directionalLight
             position={[12, 25, 0]}
             intensity={1}
             rotation={[0, 0, 0]}
+            castShadow
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
+            shadow-bias={-0.0001}
           />
         </group>
         <group>
@@ -537,11 +586,29 @@ export default function Scene({
             intensity={1}
             rotation={[0, 0, 0]}
             color={'white'}
+            castShadow
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
+            shadow-bias={-0.0001}
           />
           <directionalLight
             position={[-25, 25, 0]}
             intensity={1}
             rotation={[0, 0, 0]}
+            castShadow
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
+            shadow-bias={-0.0001}
           />
         </group>
         <group>
@@ -551,8 +618,8 @@ export default function Scene({
             rotation={[0, 0, 0]}
             color={'white'}
             castShadow
-            shadow-mapSize-width={2048}
-            shadow-mapSize-height={2048}
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
             shadow-camera-far={500}
             shadow-camera-left={-500}
             shadow-camera-right={500}
@@ -565,8 +632,8 @@ export default function Scene({
             intensity={1}
             rotation={[0, 0, 0]}
             castShadow
-            shadow-mapSize-width={2048}
-            shadow-mapSize-height={2048}
+            shadow-mapSize-width={512}
+            shadow-mapSize-height={512}
             shadow-camera-far={500}
             shadow-camera-left={-500}
             shadow-camera-right={500}
@@ -643,7 +710,7 @@ export default function Scene({
             position={memoizedInitPosition}
             envIntensity={backgroundIntensity}
           />
-          <Garden scale={2} position={[0, 2, 0]} />
+          <Garden scale={2} position={[0, 2, 0]} onSelect={setSelectedModel} />
 
           {placedModels.map((model) => (
             <DroppedModel
