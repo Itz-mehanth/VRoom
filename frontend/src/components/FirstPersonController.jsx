@@ -7,28 +7,10 @@ import * as THREE from 'three';
 import { SkeletonUtils } from 'three-stdlib'
 import useKeyboard from '../utils/useKeyboard';
 import { Character } from './Character';
-// import { log, getSocket } from "./Scene"; // Scene exports usually differ, adapting.
 
-/* 
-  NOTE: The following FBX imports are commented out because the files are missing.
-  Uncomment/restore them once you add the files to public/models/.
-*/
-// const IDLE_URL = "/models/Idle.fbx";
-// const WALK_URL = "/models/Walking.fbx";
-// const STAND_URL = "/models/Crouched To Standing.fbx";
-// const RUN_URL = "/models/Running.fbx";
-// const JUMP_URL = "/models/Jump.fbx";
-// const GUN_IDLE_URL = "/models/Rifle Idle.fbx";
-// const GUN_AIM_URL = "/models/Gunplay.fbx";
-// const DEATH_URL = "/models/Falling Back Death.fbx";
-// const SHOOT_WALK_FORWARD = "/models/shoot_walk_forward.fbx";
-// const SHOOT_WALK_BACKWARD = "/models/shoot_walk_backward.fbx";
-// const SHOOT_WALK_LEFT = "/models/shoot_walk_left.fbx";
-// const SHOOT_WALK_RIGHT = "/models/shoot_walk_right.fbx";
-// const PUNCH_URL = "/models/punch.fbx";
 
 const FirstPersonController = forwardRef(
-    ({ startPosition = [0, 2.7, 5], joystickDataRef, aimJoystickRef, aimActiveRef, isMobile, isFirstPerson, combatMode, socket, isMenuOpen, userName }, ref) => {
+    ({ startPosition = [0, 4, 0], joystickDataRef, aimJoystickRef, aimActiveRef, isMobile, isFirstPerson, combatMode, socket, isMenuOpen, userName }, ref) => {
         const bodyRef = useRef();
         // const socket = socketref || getSocket(); // Use prop provided socket
         const cameraColliderRef = useRef();
@@ -95,9 +77,6 @@ const FirstPersonController = forwardRef(
         const MAX_CAMERA_ANGLE = Math.PI / 3;
 
         const FIRST_PERSON_HEIGHT = 4.5;
-        const THIRD_PERSON_DISTANCE = 6;
-        const THIRD_PERSON_HEIGHT = 1;
-        const WALL_OFFSET = 0.3;
 
         // Use Imperative Handle
         useImperativeHandle(ref, () => ({
@@ -344,7 +323,7 @@ const FirstPersonController = forwardRef(
                 }
             }
 
-            // Apply Velocity
+            // Apply velocity directly (respects collisions properly)
             rb.setLinvel({
                 x: moveVel.x,
                 y: currentVel.y, // Preserve gravity
@@ -386,12 +365,15 @@ const FirstPersonController = forwardRef(
             <group dispose={null}>
                 <RigidBody
                     ref={bodyRef}
+                    type="dynamic"
                     colliders={false}
                     enabledRotations={[false, false, false]}
+                    lockRotations
                     position={startPosition}
                     friction={0.5}
+                    restitution={0}
                 >
-                    <CapsuleCollider args={[0.5, 0.3]} position={[0, 0.8, 0]} />
+                    <CapsuleCollider args={[0.25, 0.25]} position={[0, 0.5, 0]} />
 
                     <group ref={groupRef} visible={!isFirstPerson}>
                         <Character ref={characterRef} />
@@ -399,7 +381,7 @@ const FirstPersonController = forwardRef(
                 </RigidBody>
 
                 <RigidBody ref={cameraColliderRef} type="kinematicPosition" colliders={false}>
-                    <BallCollider args={[0.2]} />
+                    <BallCollider args={[0.1]} />
                 </RigidBody>
             </group>
         );
