@@ -442,12 +442,13 @@ export default function Scene({
           zoneName={zoneName} // <-- pass the timezone name as a prop
         /> */}
 
-        <Environment files={'/hdr/kloppenheim_03_puresky_1k.hdr'}/>
+        <Environment environmentIntensity={1} backgroundIntensity={1} files={'/hdr/the_sky_is_on_fire_4k.exr'} />
+
         <DragHandler
           draggedModel={draggedModel}
           canvasRef={canvasRef}
         />
-  
+
 
         <Physics gravity={[0, -9.81, 0]}>
           <FirstPersonController
