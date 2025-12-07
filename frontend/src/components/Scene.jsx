@@ -1,28 +1,56 @@
 import React, { Suspense, useRef, useState, useEffect, useMemo } from 'react';
 import * as THREE from 'three';
+import { MathUtils } from 'three';
 import { useAuth } from '../contexts/AuthContext';
-import { createPlantInstance, getAllPlantInstances } from '../services/plantService';
-import RemotePlayer from './RemotePlayer';
-import { Canvas } from '@react-three/fiber';
+import { extend, useThree, useFrame, Canvas } from '@react-three/fiber';
+import { EffectComposer, RenderPass, UnrealBloomPass, ShaderPass } from 'three-stdlib';
+import { GammaCorrectionShader } from 'three-stdlib';
+
+extend({ EffectComposer, RenderPass, UnrealBloomPass, ShaderPass });
 import { Environment, Sky, PerspectiveCamera, Stats } from '@react-three/drei';
-import { EffectComposer, Bloom, SSAO, ToneMapping, Vignette } from '@react-three/postprocessing';
-import { BlendFunction, ToneMappingMode } from 'postprocessing';
-import FirstPersonController from './FirstPersonController';
 import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier';
 import { Joystick } from "react-joystick-component";
-import { MathUtils } from 'three';
+import { Leva, useControls } from 'leva';
+import axios from 'axios';
+import { DateTime } from "luxon";
+
+import { createPlantInstance, getAllPlantInstances } from '../services/plantService';
+import { geoToLocal } from '../geoUtils';
+import RemotePlayer from './RemotePlayer';
+import FirstPersonController from './FirstPersonController';
 import PlantBot from './PlantBot';
 import HeldItem from './HeldItem';
 import DropIndicator from './DropIndicator';
 import DroppedModel from './DroppedModel';
 import Garden from './Garden';
-import { useThree } from '@react-three/fiber';
 import RealtimeEnvironment from './RealtimeEnvironment';
-import { Leva, useControls } from 'leva';
 import ProceduralTerrain from './ProceduralTerrain';
-import { geoToLocal } from '../geoUtils';
-import axios from 'axios';
-import { DateTime } from "luxon";
+
+
+const Effects = () => {
+  const { gl, scene, camera, size } = useThree();
+  const composer = useRef();
+
+  useEffect(() => {
+    if (composer.current) {
+      composer.current.setSize(size.width, size.height);
+    }
+  }, [size]);
+
+  useFrame(() => {
+    if (composer.current) {
+      composer.current.render();
+    }
+  }, 1);
+
+  return (
+    <effectComposer ref={composer} args={[gl]}>
+      <renderPass attach="passes-0" args={[scene, camera]} />
+      <unrealBloomPass attach="passes-1" args={[undefined, 0.4, 1, 0.9]} />
+      <shaderPass attach="passes-2" args={[GammaCorrectionShader]} />
+    </effectComposer>
+  );
+};
 
 // Define raycaster and ground plane once to avoid re-creation on renders
 const raycaster = new THREE.Raycaster();
@@ -425,9 +453,10 @@ export default function Scene({
           failIfMajorPerformanceCaveat: true,
           logarithmicDepthBuffer: true,
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.2,
+          toneMappingExposure: 0.5,
           outputColorSpace: THREE.SRGBColorSpace,
         }}
+        frameBufferType={THREE.HalfFloatType}
         style={{ height: '100%' }}
         onDoubleClick={handleCanvasClick}
       >
@@ -444,7 +473,106 @@ export default function Scene({
           zoneName={zoneName} // <-- pass the timezone name as a prop
         /> */}
 
-        <Environment environmentIntensity={1} backgroundIntensity={1} files={'/hdr/the_sky_is_on_fire_4k.exr'} />
+        {/* Darker Environment */}
+        {/* <Environment environmentIntensity={0.05} backgroundIntensity={0.05} files={'/hdr/the_sky_is_on_fire_4k.exr'} /> */}
+
+        {/* Minimal lighting for shadows */}
+        <ambientLight intensity={0.1} />
+        <group>
+          <directionalLight
+            position={[-8, 15, 10]}
+            intensity={1}
+            rotation={[Math.PI / 2, 0, 0]}
+            color={'white'}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={250}
+            shadow-camera-left={-200}
+            shadow-camera-right={200}
+            shadow-camera-top={200}
+            shadow-camera-bottom={-200}
+            shadow-bias={-0.0001}
+          />
+          <directionalLight
+            position={[-8, 15, 0]}
+            intensity={1}
+            rotation={[Math.PI / 2, 0, 0]}
+            color={'white'}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={250}
+            shadow-camera-left={-200}
+            shadow-camera-right={200}
+            shadow-camera-top={200}
+            shadow-camera-bottom={-200}
+            shadow-bias={-0.0001}
+          />
+        </group>
+        <group>
+          <directionalLight
+            position={[8, 15, 10]}
+            intensity={1}
+            rotation={[Math.PI / 2, 0, 0]}
+            color={'white'}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={250}
+            shadow-camera-left={-200}
+            shadow-camera-right={200}
+            shadow-camera-top={200}
+            shadow-camera-bottom={-200}
+            shadow-bias={-0.0001}
+          />
+          <directionalLight
+            position={[8, 15, 0]}
+            intensity={1}
+            rotation={[Math.PI / 2, 0, 0]}
+            color={'white'}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={250}
+            shadow-camera-left={-200}
+            shadow-camera-right={200}
+            shadow-camera-top={200}
+            shadow-camera-bottom={-200}
+            shadow-bias={-0.0001}
+          />
+        </group>
+        <group>
+          <directionalLight
+            position={[12, 25, 10]}
+            intensity={1}
+            rotation={[0, 0, 0]}
+            color={'white'}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={250}
+            shadow-camera-left={-200}
+            shadow-camera-right={200}
+            shadow-camera-top={200}
+            shadow-camera-bottom={-200}
+            shadow-bias={-0.0001}
+          />
+          <directionalLight
+            position={[12, 25, 0]}
+            intensity={1}
+            rotation={[0, 0, 0]}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={250}
+            shadow-camera-left={-200}
+            shadow-camera-right={200}
+            shadow-camera-top={200}
+            shadow-camera-bottom={-200}
+            shadow-bias={-0.0001}
+          />
+        </group>
 
         <DragHandler
           draggedModel={draggedModel}
@@ -533,25 +661,8 @@ export default function Scene({
           ))}
         </Physics>
 
-        {/* Post-Processing Effects - must be outside Physics */}
-        <EffectComposer>
-          {/* Bloom for glow effect */}
-          <Bloom
-            intensity={0.5}
-            luminanceThreshold={0.9}
-            luminanceSmoothing={0.9}
-            mipmapBlur
-          />
-          {/* Tone Mapping for cinematic look */}
-          <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-          {/* Vignette for focus */}
-          <Vignette
-            offset={0.3}
-            darkness={0.5}
-            eskil={false}
-            blendFunction={BlendFunction.NORMAL}
-          />
-        </EffectComposer>
+        {/* Manual Post-Processing */}
+        <Effects />
       </Canvas>
       {isMobile && (
         <div style={{
