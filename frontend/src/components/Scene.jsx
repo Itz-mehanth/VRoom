@@ -294,7 +294,7 @@ export default function Scene({
 
       if (userToUpdate) {
         // console.log('[Scene] Updating user:', userToUpdate.name);
-        // Ensure position is stored as [x, y, z] array to match RemotePlayer expectation
+        // Ensure position is stowhite as [x, y, z] array to match RemotePlayer expectation
         const newPos = Array.isArray(position) ? position : [position.x, position.y, position.z];
         userToUpdate.position = newPos;
         userToUpdate.rotation = rotation;
@@ -487,11 +487,11 @@ export default function Scene({
             castShadow
             shadow-mapSize-width={2048}
             shadow-mapSize-height={2048}
-            shadow-camera-far={250}
-            shadow-camera-left={-200}
-            shadow-camera-right={200}
-            shadow-camera-top={200}
-            shadow-camera-bottom={-200}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
             shadow-bias={-0.0001}
           />
           <directionalLight
@@ -502,11 +502,11 @@ export default function Scene({
             castShadow
             shadow-mapSize-width={2048}
             shadow-mapSize-height={2048}
-            shadow-camera-far={250}
-            shadow-camera-left={-200}
-            shadow-camera-right={200}
-            shadow-camera-top={200}
-            shadow-camera-bottom={-200}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
             shadow-bias={-0.0001}
           />
         </group>
@@ -519,11 +519,11 @@ export default function Scene({
             castShadow
             shadow-mapSize-width={2048}
             shadow-mapSize-height={2048}
-            shadow-camera-far={250}
-            shadow-camera-left={-200}
-            shadow-camera-right={200}
-            shadow-camera-top={200}
-            shadow-camera-bottom={-200}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
             shadow-bias={-0.0001}
           />
           <directionalLight
@@ -534,11 +534,11 @@ export default function Scene({
             castShadow
             shadow-mapSize-width={2048}
             shadow-mapSize-height={2048}
-            shadow-camera-far={250}
-            shadow-camera-left={-200}
-            shadow-camera-right={200}
-            shadow-camera-top={200}
-            shadow-camera-bottom={-200}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
             shadow-bias={-0.0001}
           />
         </group>
@@ -551,11 +551,11 @@ export default function Scene({
             castShadow
             shadow-mapSize-width={2048}
             shadow-mapSize-height={2048}
-            shadow-camera-far={250}
-            shadow-camera-left={-200}
-            shadow-camera-right={200}
-            shadow-camera-top={200}
-            shadow-camera-bottom={-200}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
             shadow-bias={-0.0001}
           />
           <directionalLight
@@ -565,11 +565,73 @@ export default function Scene({
             castShadow
             shadow-mapSize-width={2048}
             shadow-mapSize-height={2048}
-            shadow-camera-far={250}
-            shadow-camera-left={-200}
-            shadow-camera-right={200}
-            shadow-camera-top={200}
-            shadow-camera-bottom={-200}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
+            shadow-bias={-0.0001}
+          />
+        </group>
+        <group>
+          <directionalLight
+            position={[-25, 25, 10]}
+            intensity={1}
+            rotation={[0, 0, 0]}
+            color={'white'}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
+            shadow-bias={-0.0001}
+          />
+          <directionalLight
+            position={[-25, 25, 0]}
+            intensity={1}
+            rotation={[0, 0, 0]}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
+            shadow-bias={-0.0001}
+          />
+        </group>
+        <group>
+          <directionalLight
+            position={[-35, 25, 10]}
+            intensity={1}
+            rotation={[0, 0, 0]}
+            color={'white'}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
+            shadow-bias={-0.0001}
+          />
+          <directionalLight
+            position={[-35, 25, 0]}
+            intensity={1}
+            rotation={[0, 0, 0]}
+            castShadow
+            shadow-mapSize-width={2048}
+            shadow-mapSize-height={2048}
+            shadow-camera-far={500}
+            shadow-camera-left={-500}
+            shadow-camera-right={500}
+            shadow-camera-top={500}
+            shadow-camera-bottom={-500}
             shadow-bias={-0.0001}
           />
         </group>
@@ -618,7 +680,7 @@ export default function Scene({
             />
           </mesh>
 
-          <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} />
+          {/* <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} /> */}
           {heldItem && (
             <HeldItem
               item={heldItem}

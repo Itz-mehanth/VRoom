@@ -1,8 +1,18 @@
 import React, { useRef, forwardRef, useEffect, useMemo } from 'react'
-import { Billboard, Text, useGLTF } from '@react-three/drei'
+import { Billboard, Cylinder, Sphere, Text, useGLTF } from '@react-three/drei'
 import { Plant } from './Plant'
 import { RigidBody, CuboidCollider } from '@react-three/rapier'
 import * as THREE from 'three'
+
+const TubeLight = ({ position }) => (
+  <group position={position}>
+    <pointLight intensity={0.1} distance={3} color="#ffff00" decay={2} />
+    <mesh rotation={[Math.PI / 2, 0, 0]}>
+      <cylinderGeometry args={[0.008, 0.008, 0.2, 16]} />
+      <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={5} toneMapped={false} />
+    </mesh>
+  </group>
+);
 
 const Garden = forwardRef((props, ref) => {
   const { nodes, materials } = useGLTF('/models/environment.glb')
@@ -25,6 +35,7 @@ const Garden = forwardRef((props, ref) => {
         {/* Plant pots on the racks */}
         <group>
           <group position={[1.33, -0.5, -0.27]}>
+            <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
               <Plant position={[0, 0, 0]} />
               <Plant position={[0, 0, 0.08]} />
@@ -37,6 +48,7 @@ const Garden = forwardRef((props, ref) => {
             </group>
           </group>
           <group position={[1.33, -0.5, 0.01]}>
+            <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
               <Plant position={[0, 0, 0]} />
               <Plant position={[0, 0, 0.08]} />
@@ -49,6 +61,7 @@ const Garden = forwardRef((props, ref) => {
             </group>
           </group>
           <group position={[1.33, -0.5, 0.26]}>
+            <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
               <Plant position={[0, 0, 0]} />
               <Plant position={[0, 0, 0.08]} />
@@ -61,6 +74,7 @@ const Garden = forwardRef((props, ref) => {
             </group>
           </group>
           <group position={[1.33, -0.5, 0.53]}>
+            <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
               <Plant position={[0, 0, 0]} />
               <Plant position={[0, 0, 0.08]} />
@@ -73,6 +87,7 @@ const Garden = forwardRef((props, ref) => {
             </group>
           </group>
           <group position={[1.33, -0.5, 0.82]}>
+            <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
               <Plant position={[0, 0, 0]} />
               <Plant position={[0, 0, 0.08]} />
@@ -85,6 +100,7 @@ const Garden = forwardRef((props, ref) => {
             </group>
           </group>
           <group position={[1.33, -0.5, 1.1]}>
+            <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
               <Plant position={[0, 0, 0]} />
               <Plant position={[0, 0, 0.08]} />
@@ -97,6 +113,7 @@ const Garden = forwardRef((props, ref) => {
             </group>
           </group>
           <group position={[1.33, -0.5, 1.39]}>
+            <TubeLight position={[-0.85, 0.68, -0.1]} />
             <group position={[0, 0, 0]}>
               <Plant position={[0, 0, 0]} />
               <Plant position={[0, 0, 0.08]} />
