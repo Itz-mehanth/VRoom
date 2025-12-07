@@ -7,7 +7,7 @@ import ModelIndicator from './ModelIndicator';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { getModelStats } from '../services/plantService'; // adjust path as needed
 
-const DroppedModel = ({plantId, instanceId, modelPath, position, onClick, name, description, setSelectedModel, setSelectedModelDetails, heldItem, onPositionChange, feedPlant }) => {
+const DroppedModel = ({ plantId, instanceId, modelPath, position, onClick, name, description, setSelectedModel, setSelectedModelDetails, heldItem, onPositionChange, feedPlant }) => {
   const meshRef = useRef();
   const modelRef = useRef();
   const draggableRef = useRef();
@@ -22,20 +22,20 @@ const DroppedModel = ({plantId, instanceId, modelPath, position, onClick, name, 
   const [modelError, setModelError] = useState(false);
 
   const gltf = useLoader(GLTFLoader, modelPath, (loader) => {
-      if (!modelPath) {
-        console.warn('No modelPath provided for DroppedModel');
-        return null;
-      }
-
-      try {
-        // Use a simple loader for now to avoid WebGL issues
-        return null; // We'll handle loading differently
-      } catch (error) {
-        console.error('Error loading model:', error);
-        setModelError(true);
-        return null;
-      }
+    if (!modelPath) {
+      console.warn('No modelPath provided for DroppedModel');
+      return null;
     }
+
+    try {
+      // Use a simple loader for now to avoid WebGL issues
+      return null; // We'll handle loading differently
+    } catch (error) {
+      console.error('Error loading model:', error);
+      setModelError(true);
+      return null;
+    }
+  }
   );
 
   // Create a clone of the model when it's loaded
@@ -54,6 +54,14 @@ const DroppedModel = ({plantId, instanceId, modelPath, position, onClick, name, 
       const width = box.max.x - box.min.x;
       setModelHeight(height);
       setModelWidth(width);
+
+      // Enable shadows on all meshes in the model
+      modelClone.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
     }
   }, [modelClone]);
 
@@ -116,7 +124,7 @@ const DroppedModel = ({plantId, instanceId, modelPath, position, onClick, name, 
   // Calculate adjusted position to place model on ground
   const adjustedPosition = [
     position[0],
-    position[1] + (modelHeight/2) + 0.1, // Add half the model height to raise it to ground level
+    position[1] + (modelHeight / 2) + 0.1, // Add half the model height to raise it to ground level
     position[2]
   ];
 
@@ -136,7 +144,7 @@ const DroppedModel = ({plantId, instanceId, modelPath, position, onClick, name, 
     if (mesh && originalMaterial.current) {
       mesh.material = originalMaterial.current.clone();
     }
-    
+
     // Update position if onPositionChange is provided
     if (onPositionChange && meshRef.current) {
       const newPosition = meshRef.current.position.toArray();
@@ -187,37 +195,37 @@ const DroppedModel = ({plantId, instanceId, modelPath, position, onClick, name, 
         }}
         onDragEnd={handleDragEnd}
       >
-          <mesh ref={modelRef}>
-            <primitive
-              ref={meshRef}
-              scale={0.4}
-              position={adjustedPosition}
-              onClick={handleClick}
-              onPointerOver={(e) => {
-                e.stopPropagation();
-                document.body.style.cursor = 'grab';
-                setIsHovered(true);
-              }}
-              onPointerOut={(e) => {
-                e.stopPropagation();
-                document.body.style.cursor = 'auto';
-                setIsHovered(false);
-              }}
-              onTouchStart={(e) => {
-                e.stopPropagation();
-                setIsHovered(true);
-                handleClick(e);
-              }}
-              onTouchEnd={(e) => {
-                e.stopPropagation();
-                setIsHovered(false);
-              }}
+        <mesh ref={modelRef} castShadow receiveShadow>
+          <primitive
+            ref={meshRef}
+            scale={0.4}
+            position={adjustedPosition}
+            onClick={handleClick}
+            onPointerOver={(e) => {
+              e.stopPropagation();
+              document.body.style.cursor = 'grab';
+              setIsHovered(true);
+            }}
+            onPointerOut={(e) => {
+              e.stopPropagation();
+              document.body.style.cursor = 'auto';
+              setIsHovered(false);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              setIsHovered(true);
+              handleClick(e);
+            }}
+            onTouchEnd={(e) => {
+              e.stopPropagation();
+              setIsHovered(false);
+            }}
             object={modelClone} />
-          </mesh>
+        </mesh>
       </DragControls>
-      
+
       {/* ModelIndicator outside the DragControls */}
-      <ModelIndicator 
+      <ModelIndicator
         position={[
           adjustedPosition[0],
           adjustedPosition[1] + 1, // Increased height to separate from name label

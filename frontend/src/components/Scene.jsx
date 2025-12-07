@@ -413,7 +413,7 @@ export default function Scene({
     <>
       <Leva hidden />
       <Canvas
-        shadows
+        shadows="soft"
         ref={canvasRef}
         gl={{
           antialias: true,
@@ -421,11 +421,15 @@ export default function Scene({
           powerPreference: 'high-performance',
           preserveDrawingBuffer: true,
           failIfMajorPerformanceCaveat: true,
-          logarithmicDepthBuffer: true
+          logarithmicDepthBuffer: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.2,
+          outputColorSpace: THREE.SRGBColorSpace,
         }}
         style={{ height: '100%' }}
         onDoubleClick={handleCanvasClick}
       >
+
         <Stats />
         <RealtimeEnvironment
           lat={lat}
@@ -441,7 +445,34 @@ export default function Scene({
           draggedModel={draggedModel}
           canvasRef={canvasRef}
         />
-        <Sky sunPosition={sunPosition} turbidity={skyTurbidity} />
+        <Sky intensity={0.1} sunPosition={sunPosition} turbidity={skyTurbidity} />
+
+        {/* Lighting Setup for Realistic Shadows */}
+        <directionalLight
+          position={[10, 20, 10]}
+          intensity={1.5}
+          castShadow
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-camera-far={100}
+          shadow-camera-left={-50}
+          shadow-camera-right={50}
+          shadow-camera-top={50}
+          shadow-camera-bottom={-50}
+          shadow-bias={-0.0001}
+        />
+        <directionalLight
+          position={[-5, 10, -5]}
+          intensity={0.3}
+          color="#b0c4de"
+        />
+        <ambientLight intensity={0.4} />
+        <hemisphereLight
+          skyColor="#87ceeb"
+          groundColor="#362907"
+          intensity={0.5}
+        />
+        <pointLight position={[0, 10, 0]} intensity={0.3} distance={50} decay={2} />
 
 
 
@@ -473,6 +504,16 @@ export default function Scene({
 
           <CuboidCollider args={[1000, 1, 1000]} position={[0, -3, 0]} /> {/* Invisible Floor */}
 
+          {/* Visible ground plane for shadow receiving */}
+          <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.99, 0]}>
+            <planeGeometry args={[2000, 2000]} />
+            <meshStandardMaterial
+              color="#4a5f3a"
+              roughness={0.8}
+              metalness={0.1}
+            />
+          </mesh>
+
           <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} />
           {heldItem && (
             <HeldItem
@@ -496,7 +537,7 @@ export default function Scene({
             position={memoizedInitPosition}
             envIntensity={backgroundIntensity}
           />
-          <Garden scale={0.5} />
+          <Garden scale={2} position={[0, 2, 0]} />
 
           {placedModels.map((model) => (
             <DroppedModel

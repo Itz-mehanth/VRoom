@@ -24,15 +24,15 @@ const PlantBot = ({ position = [0, 0, 0], refillResourceFromAdvice }) => {
   // Check distance to player
   useFrame((state) => {
     if (!group.current) return;
-    
+
     const playerPosition = new THREE.Vector3();
     state.camera.getWorldPosition(playerPosition);
-    
+
     const botPosition = new THREE.Vector3();
     group.current.getWorldPosition(botPosition);
-    
+
     const distance = playerPosition.distanceTo(botPosition);
-    
+
     // Show button when player is within 3 units
     setShowQuestionButton(distance < 3);
   });
@@ -56,7 +56,7 @@ const PlantBot = ({ position = [0, 0, 0], refillResourceFromAdvice }) => {
 
   const handleAskQuestion = async () => {
     if (!question.trim()) return;
-    
+
     setIsLoading(true);
 
     try {
@@ -122,16 +122,16 @@ const PlantBot = ({ position = [0, 0, 0], refillResourceFromAdvice }) => {
   return (
     <group ref={group} position={position}>
       {/* Bot Character */}
-        <group rotation={[0, 0, 0]} scale={[1, 1, 1]}>
-          <mesh>
-            <boxGeometry args={[1, 2, 1]}/>
-            <meshStandardMaterial color="green" />
-          </mesh>
-        </group>
+      <group rotation={[0, 0, 0]} scale={[1, 1, 1]}>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[1, 2, 1]} />
+          <meshStandardMaterial color="green" />
+        </mesh>
+      </group>
 
       {/* Name Tag */}
       <Billboard>
-        <mesh position={[0, 2.5, 0]}>
+        <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
           <boxGeometry args={[2, 0.5, 0.1]} />
           <meshStandardMaterial color="white" />
           <Text
@@ -150,20 +150,20 @@ const PlantBot = ({ position = [0, 0, 0], refillResourceFromAdvice }) => {
       {showQuestionButton && !showQuestionBox && !showWaterBox && !showFertilizerBox && (
         <Html position={[0, 1.5, 0]}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <button
+            <button
               onClick={() => { setShowQuestionBox(true); setShowWaterBox(false); setShowFertilizerBox(false); }}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              fontSize: '16px',
-            }}
-          >
-            Ask Question
-          </button>
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '16px',
+              }}
+            >
+              Ask Question
+            </button>
             <button
               onClick={() => { setShowWaterBox(true); setShowQuestionBox(false); setShowFertilizerBox(false); setAdvice(''); setSelectedPlantId(''); }}
               style={{
@@ -329,15 +329,15 @@ const PlantBot = ({ position = [0, 0, 0], refillResourceFromAdvice }) => {
             </div>
             {advice && (
               <>
-              <div style={{
-                marginTop: '10px',
-                padding: '10px',
+                <div style={{
+                  marginTop: '10px',
+                  padding: '10px',
                   backgroundColor: '#fff3e0',
-                borderRadius: '5px',
+                  borderRadius: '5px',
                   whiteSpace: 'pre-line',
-              }}>
+                }}>
                   {advice}
-              </div>
+                </div>
                 <button
                   style={{ marginTop: '10px', padding: '8px 16px', backgroundColor: '#FF9800', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
                   onClick={() => {

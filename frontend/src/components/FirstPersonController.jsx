@@ -76,7 +76,7 @@ const FirstPersonController = forwardRef(
         const runningAudioRef = useRef(null);
         const currentFootAudioRef = useRef(null);
 
-        const speed = 2.5;
+        const speed = 1;
         const jumpForce = 6;
         const sensitivity = 0.002;
         const touchSensitivity = 0.005;
