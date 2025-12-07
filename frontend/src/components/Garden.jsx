@@ -4,15 +4,14 @@ import { Plant } from './Plant'
 import { RigidBody, CuboidCollider } from '@react-three/rapier'
 import * as THREE from 'three'
 
-const TubeLight = ({ position }) => (
+const TubeLight = React.memo(({ position }) => (
   <group position={position}>
-    <pointLight intensity={0.1} distance={3} color="#ffff00" decay={2} />
     <mesh rotation={[Math.PI / 2, 0, 0]}>
       <cylinderGeometry args={[0.008, 0.008, 0.2, 16]} />
       <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={5} toneMapped={false} />
     </mesh>
   </group>
-);
+));
 
 const Garden = forwardRef((props, ref) => {
   const { nodes, materials } = useGLTF('/models/environment.glb')
@@ -3503,6 +3502,6 @@ const Garden = forwardRef((props, ref) => {
 
 Garden.displayName = 'Garden'
 
-export default Garden
+export default React.memo(Garden)
 
 useGLTF.preload('/models/environment.glb')

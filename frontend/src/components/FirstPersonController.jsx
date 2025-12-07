@@ -23,6 +23,7 @@ const FirstPersonController = forwardRef(
         useEffect(() => {
             if (camera) {
                 camera.near = 0.01;
+                camera.far = 200;
                 camera.updateProjectionMatrix();
             }
         }, [camera]);
