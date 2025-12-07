@@ -531,34 +531,27 @@ export default function Scene({
               feedPlant={feedPlant}
             />
           ))}
-
-          {/* Post-Processing Effects */}
-          <EffectComposer>
-            {/* Bloom for glow effect */}
-            <Bloom
-              intensity={0.5}
-              luminanceThreshold={0.9}
-              luminanceSmoothing={0.9}
-              mipmapBlur
-            />
-            {/* SSAO for ambient occlusion depth */}
-            <SSAO
-              blendFunction={BlendFunction.MULTIPLY}
-              samples={16}
-              radius={0.5}
-              intensity={30}
-            />
-            {/* Tone Mapping for cinematic look */}
-            <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
-            {/* Vignette for focus */}
-            <Vignette
-              offset={0.3}
-              darkness={0.5}
-              eskil={false}
-              blendFunction={BlendFunction.NORMAL}
-            />
-          </EffectComposer>
         </Physics>
+
+        {/* Post-Processing Effects - must be outside Physics */}
+        <EffectComposer>
+          {/* Bloom for glow effect */}
+          <Bloom
+            intensity={0.5}
+            luminanceThreshold={0.9}
+            luminanceSmoothing={0.9}
+            mipmapBlur
+          />
+          {/* Tone Mapping for cinematic look */}
+          <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+          {/* Vignette for focus */}
+          <Vignette
+            offset={0.3}
+            darkness={0.5}
+            eskil={false}
+            blendFunction={BlendFunction.NORMAL}
+          />
+        </EffectComposer>
       </Canvas>
       {isMobile && (
         <div style={{
