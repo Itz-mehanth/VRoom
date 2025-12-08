@@ -445,13 +445,20 @@ export default function Scene({
     }
   }, [zoneName]);
 
+  // Fixed Aggressive Performance Mode
+  // No dynamic scaling. Just raw performance.
+
+  useEffect(() => {
+    // Optional: Log or setup static config
+  }, []);
+
   return (
     <>
       <Leva hidden />
       <Canvas
         frameloop={isMarketplaceOpen ? "never" : "always"}
         shadows="soft"
-        dpr={dpr}
+        dpr={0.75} // Fixed Aggressive Quality
         ref={canvasRef}
         gl={{
           antialias: true,
@@ -470,9 +477,6 @@ export default function Scene({
       >
 
         <Stats />
-        <PerformanceMonitor onDecline={() => setDpr(0.5)} onIncline={() => setDpr(1.5)} />
-        <AdaptiveDpr pixelated />
-        <AdaptiveEvents />
         <BakeShadows />
         <Preload all />
         {/* <RealtimeEnvironment
