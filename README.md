@@ -1,4 +1,4 @@
-# Virtual Herbarium Garden (V-Room) 🌿🚀
+# Virtual Herbarium Garden (V-Plants) 🌿🚀
 
 > **A real-time multiplayer 3D immersive environment built with modern web technologies.**
 > *Gardening, exploration, and social interaction in a high-performance virtual world.*
@@ -9,7 +9,7 @@
 
 ## 📖 Overview
 
-**V-Room** is a cutting-edge web application that merges **3D Graphics**, **Real-time Networking**, and **Interactive Gameplay**. Users can explore a procedurally generated procedural terrain, plant and nurture virtual seeds, and interact with other users via voice and video chat in real-time.
+**V-Plants** is a cutting-edge web application that merges **3D Graphics**, **Real-time Networking**, and **Interactive Gameplay**. Users can explore a procedurally generated procedural terrain, plant and nurture virtual seeds, and interact with other users via voice and video chat in real-time.
 
 Built to push the limits of the browser, this project demonstrates advanced engineering in graphics optimization, state synchronization, and user interface design.
 
