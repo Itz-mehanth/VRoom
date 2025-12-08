@@ -712,11 +712,11 @@ export default function Scene({
               );
             })}
 
-            <ProceduralTerrain
+            {/* <ProceduralTerrain
               bbox={memoizedBBox}
               position={memoizedInitPosition}
               envIntensity={backgroundIntensity}
-            />
+            /> */}
             <Garden scale={2} position={[0, 2, 0]} onSelect={setSelectedModel} />
 
             {placedModels.map((model) => (
