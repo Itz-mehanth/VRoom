@@ -88,7 +88,7 @@ This project heavily prioritizes performance to ensure 60 FPS on standard device
     ```
 
 4.  **Open in Browser**
-    Visit `https://vplants.vercel.app` to enter the virtual world.
+    Visit `http://localhost:5173` to enter the virtual world.
 
 ---
 
