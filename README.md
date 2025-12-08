@@ -93,8 +93,10 @@ This project heavily prioritizes performance to ensure 60 FPS on standard device
 ---
 
 ## 📸 Screenshots
+<img width="1919" height="903" alt="image" src="https://github.com/user-attachments/assets/ef061bd8-c3cb-4e8f-9bf9-773eb0dbcade" />
 
+<img width="1919" height="910" alt="image" src="https://github.com/user-attachments/assets/7418a81f-3f21-4935-8bfb-f807f70a95fa" />
+
+<img width="1919" height="906" alt="image" src="https://github.com/user-attachments/assets/56b68622-b66a-4bda-b6fd-9e796e576100" />
 
 ---
-
-*Created by **mehanth** as a showcase of modern Agentic AI coding and 3D Web Development.*
