@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { useGLTF, PresentationControls, DragControls, Billboard, Text, OrbitControls } from '@react-three/drei';
+import { useGLTF, PresentationControls, DragControls, Billboard, Text, OrbitControls, Center } from '@react-three/drei';
 import { useThree, useLoader } from '@react-three/fiber';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -46,30 +46,30 @@ const DroppedModel = ({ modelPath, position, onClick, name, scale }) => {
   // Calculate adjusted position to place model on ground
   const adjustedPosition = [
     position[0],
-    position[1], 
+    position[1],
     position[2]
   ];
 
   // Calculate scaling factor safely
-  const scaleVal = Array.isArray(scale) ? scale[1] : (scale || 0.4);
+  const scaleVal = scale || 0.4;
 
   return (
     <>
-      <mesh ref={modelRef} castShadow receiveShadow position={[0,0,0]}>
-        <primitive
-          scale={scale || 0.4}
-          position={[0, 0, 0]}
-          onClick={handleClick}
-          object={modelClone} 
-        />
+      <mesh ref={modelRef} castShadow receiveShadow position={adjustedPosition}>
+        <Center bottom>
+          <primitive
+            scale={8}
+            object={modelClone}
+          />
+        </Center>
       </mesh>
 
       {/* ModelIndicator */}
       <ModelIndicator
         position={[
-          adjustedPosition[0],
-          adjustedPosition[1] + (modelHeight * scaleVal) + 0.5, // Place above scaled model
-          adjustedPosition[2]
+          0,
+          1, // Place above scaled model
+          0
         ]}
         name={name}
         isHovered={false} // Static in AR view

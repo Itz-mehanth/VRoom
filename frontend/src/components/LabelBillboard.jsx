@@ -1,14 +1,14 @@
 import React, { useRef } from 'react';
-import { Billboard, Text } from '@react-three/drei';
+import { Billboard, Text, RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 import { useFrame, useThree } from '@react-three/fiber';
 
-const LabelBillboard = ({ 
+const LabelBillboard = ({
   position,
-  text, 
+  text,
   name,
   isHovered,
-  targetPosition, 
+  targetPosition,
   color = '#2C3E50',
   maxDistance = 50,
   minOpacity = 0.3
@@ -19,121 +19,83 @@ const LabelBillboard = ({
 
   useFrame((state, delta) => {
     time.current += delta;
-    
     if (groupRef.current) {
-      // Calculate distance from camera
-      const distance = camera.position.distanceTo(groupRef.current.position);
-      
-      // Calculate opacity based on distance
-      const distanceOpacity = Math.max(
-        minOpacity,
-        1 - (distance / maxDistance)
-      );
-
-      // Update materials' opacity
-      groupRef.current.traverse((child) => {
-        if (child.isMesh && child.material) {
-          child.material.opacity = distanceOpacity;
-        }
-      });
-
       // Subtle floating animation
       groupRef.current.position.y = position[1] + Math.sin(time.current * 2) * 0.05;
     }
   });
 
-  // Create a darker version of the color for shadows
-  const shadowColor = new THREE.Color(color).multiplyScalar(0.7);
+  // Calculate dimensions
+  const hasText = !!text;
+  const panelWidth = 2.0;
+  const panelHeight = hasText ? 0.8 : 0.5;
 
   return (
     <group ref={groupRef} position={position}>
-      {/* Connecting line */}
+      {/* Connecting line (3D) */}
       <mesh position={[0, -0.5, 0]}>
-        <cylinderGeometry args={[0.02, 0.02, 1, 8]} />
+        <cylinderGeometry args={[0.005, 0.005, 1, 8]} />
         <meshBasicMaterial
-          color={color}
+          color="white"
           transparent
           opacity={0.6}
         />
       </mesh>
 
-      {/* Circle marker at the bottom */}
+      {/* Anchor Dot (3D) */}
       <mesh position={[0, -1, 0]}>
-        <ringGeometry args={[0.1, 0.15, 32]} />
-        <meshBasicMaterial
-          color={color}
-          transparent
-          opacity={0.8}
-          side={THREE.DoubleSide}
-        />
+        <sphereGeometry args={[0.03, 16, 16]} />
+        <meshBasicMaterial color="white" />
       </mesh>
 
-      {/* Billboard container */}
+      {/* 3D Billboard Label */}
       <Billboard>
-        {/* Background shadow */}
-        <mesh position={[0.02, -0.02, -0.01]}>
-          <planeGeometry args={[2.2, 1.2]} />
-          <meshBasicMaterial
-            color={shadowColor}
-            transparent
-            opacity={0.3}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+        <group position={[0, hasText ? 0 : 0.15, 0]}>
 
-        {/* Main background */}
-        <mesh>
-          <planeGeometry args={[2, 1]} />
-          <meshBasicMaterial
-            color="#FFFFFF"
-            transparent
-            opacity={0.9}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+          {/* Glass-like Background Panel */}
+          <RoundedBox args={[panelWidth, panelHeight, 0.02]} radius={0.1} smoothness={4}>
+            <meshBasicMaterial
+              color="#1a1a1a"
+              transparent
+              opacity={0.8}
+            />
+          </RoundedBox>
 
-        {/* Border */}
-        <mesh>
-          <planeGeometry args={[2.1, 1.1]} />
-          <meshBasicMaterial
-            color={color}
-            transparent
-            opacity={0.2}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+          {/* Text Content */}
+          <group position={[0, 0, 0.03]}>
+            {/* Name */}
+            <Text
+              fontSize={0.2}
+              color="white"
+              anchorX="center"
+              anchorY="middle"
+              outlineWidth={0.015} // Slightly reduced outline
+              outlineColor="black"
+              // font="Inter-Bold.ttf" // Use default font for safety
+              position={[0, hasText ? 0.15 : 0, 0]}
+              maxWidth={panelWidth - 0.2}
+              textAlign="center"
+            >
+              {name}
+            </Text>
 
-        {/* Content */}
-        <group position={[0, 0, 0.01]}>
-          <Text
-            fontSize={0.25}
-            color={color}
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.02}
-            outlineColor="#FFFFFF"
-            // font="/fonts/Inter-Bold.ttf"
-            lineHeight={1.2}
-            letterSpacing={0.05}
-            textAlign='center'
-            position={[0, 0.2, 0]}
-          >
-            {name}{'\n'}
-          </Text>
-          <Text
-            fontSize={0.2}
-            color={color}
-            position={[0, -0.2, 0]}
-            anchorX="center"
-            anchorY="middle"
-            outlineWidth={0.02}
-            outlineColor="#FFFFFF"
-            // font="/fonts/Inter-Bold.ttf"
-            letterSpacing={0.05}
-            textAlign='center'
-          >
-            {text}
-          </Text>
+            {/* Detail Text */}
+            {hasText && (
+              <Text
+                fontSize={0.12}
+                color="#e0e0e0"
+                anchorX="center"
+                anchorY="middle"
+                outlineWidth={0.01}
+                outlineColor="black"
+                position={[0, -0.15, 0]}
+                maxWidth={panelWidth - 0.2}
+                textAlign="center"
+              >
+                {text}
+              </Text>
+            )}
+          </group>
         </group>
       </Billboard>
     </group>

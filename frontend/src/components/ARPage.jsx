@@ -255,9 +255,17 @@ export default function ARPage({
     loadPlants();
   }, [setPlacedModels]);
 
-  // Auto-enter AR when the component mounts
+  // Auto-enter AR when the component becomes active
   useEffect(() => {
     if (enterAr) {
+      const existingSession = store.getState().session;
+      if (existingSession) {
+        // Session already started by App.jsx
+        setMode('ar');
+        setStatus('running');
+        return;
+      }
+
       const enterARSession = async () => {
         try {
           setStatus('requesting');
@@ -266,10 +274,12 @@ export default function ARPage({
           setStatus('running');
         } catch (e) {
           console.error("Failed to auto-enter AR:", e);
-          setStatus('error');
+          setStatus('error'); // Will show manual button
           setErrorMessage(e.message || "Unknown AR Error");
         }
       };
+
+      // Attempt auto-entry (might fail if no gesture)
       enterARSession();
     }
   }, [enterAr]);

@@ -331,7 +331,16 @@ const Room = () => {
         </>
       }
 
-      {enterAr &&
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: enterAr ? 1000 : -1,
+        visibility: enterAr ? 'visible' : 'hidden',
+        pointerEvents: enterAr ? 'auto' : 'none'
+      }}>
         <ARPage
           coords={coords}
           enterAr={enterAr}
@@ -378,7 +387,7 @@ const Room = () => {
           roomId={roomId}
           envPreset={envPreset}
         />
-      }
+      </div>
 
 
       <div style={{
