@@ -62,9 +62,9 @@ const Room = () => {
     const origin = [0, 0];
     if (coords) {
       const [x, y, z] = geoToLocal(coords, origin);
-      return { x, y: 1.7, z };
+      return { x, y: 2, z };
     }
-    return { x: 0, y: 1.7, z: 5 };
+    return { x: 0, y: 0, z: 2 }; // Spawn at 0 height (WebXR uses physical height) and back z=2
   });
 
   // Only update position from coords when coords actually change (teleport/new room)

@@ -207,7 +207,7 @@ export default function RemotePlayer({ player, playerId }) {
     return (
         <group ref={groupRef} position={safePosition}>
             {/* Character component */}
-            <Character ref={characterRef} scale={1.18} position={[0, 1, 0]} />
+            <Character ref={characterRef} scale={0.5} position={[0, 2, 0]} />
 
 
 

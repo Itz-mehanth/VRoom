@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, memo } from 'react';
 import { io } from 'socket.io-client';
 import Peer from 'peerjs';
 import { useNavigate } from 'react-router-dom';
+import { vrStore } from './components/Scene';
 
 /* --- Components --- */
 
@@ -457,48 +458,44 @@ const VideoChat = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          pointerEvents: 'auto',
+          pointerEvents: 'none', // Changed from 'auto' to 'none' to allow clicking through
           zIndex: 1000,
           background: 'linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', pointerEvents: 'auto' }}> {/* Added pointerEvents: auto */}
             <button onClick={onLeaveRoom} style={{ width: 40, height: 40, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', color: 'white' }}>
               <Icons.Back />
             </button>
+
+            {/* View Toggle Moved to Left */}
+            <div style={{ display: 'flex', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(12px)', borderRadius: '24px', padding: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <button
+                onClick={() => currentView !== 'video' && toggleView()}
+                style={{
+                  background: currentView === 'video' ? '#333' : 'transparent',
+                  color: currentView === 'video' ? 'white' : '#aaa',
+                  border: 'none', borderRadius: '20px', padding: '8px 20px',
+                  fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s'
+                }}
+              >
+                <Icons.Grid style={{ width: 18, height: 18 }} stroke={currentView === 'video' ? 'white' : '#aaa'} />
+                {!isMobile && "grid"}
+              </button>
+              <button
+                onClick={() => currentView !== 'vr' && toggleView()}
+                style={{
+                  background: currentView === 'vr' ? '#333' : 'transparent',
+                  color: currentView === 'vr' ? 'white' : '#aaa',
+                  border: 'none', borderRadius: '20px', padding: '8px 20px',
+                  fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s'
+                }}
+              >
+                <Icons.Vr style={{ width: 18, height: 18 }} stroke={currentView === 'vr' ? 'white' : '#aaa'} />
+                {!isMobile && "3D world"}
+              </button>
+            </div>
           </div>
 
-          {/* Center: View Toggle */}
-          <div style={{ display: 'flex', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(12px)', borderRadius: '24px', padding: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <button
-              onClick={() => currentView !== 'video' && toggleView()}
-              style={{
-                background: currentView === 'video' ? '#333' : 'transparent',
-                color: currentView === 'video' ? 'white' : '#aaa',
-                border: 'none', borderRadius: '20px', padding: '8px 20px',
-                fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s'
-              }}
-            >
-              <Icons.Grid style={{ width: 18, height: 18 }} stroke={currentView === 'video' ? 'white' : '#aaa'} />
-              {!isMobile && "grid"}
-            </button>
-            <button
-              onClick={() => currentView !== 'vr' && toggleView()}
-              style={{
-                background: currentView === 'vr' ? '#333' : 'transparent',
-                color: currentView === 'vr' ? 'white' : '#aaa',
-                border: 'none', borderRadius: '20px', padding: '8px 20px',
-                fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s'
-              }}
-            >
-              <Icons.Vr style={{ width: 18, height: 18 }} stroke={currentView === 'vr' ? 'white' : '#aaa'} />
-              {!isMobile && "3D world"}
-            </button>
-          </div>
-
-          {/* Right */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Info Only */}
-          </div>
         </div>
 
         {/* Content Area */}
@@ -590,10 +587,12 @@ const VideoChat = ({
             <Icons.ScreenShare color={isScreenSharing ? '#202124' : 'white'} size={20} />
           </button>
 
-          <button onClick={() => { if (currentView !== 'vr') toggleView(); }} title="Enter VR Mode" style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: currentView === 'vr' ? '#8AB4F8' : '#3C4043', color: currentView === 'vr' ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icons.Vr color={currentView === 'vr' ? '#202124' : 'white'} size={20} />
+          {/* Enter VR (Immersive) */}
+          <button onClick={() => vrStore.enterVR()} title="Enter VR (Headset)" style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: '#3C4043', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icons.Vr color="white" size={20} />
           </button>
 
+          {/* Enter AR */}
           <button onClick={() => setEnterAr(!enterAr)} title="Enter AR Mode" style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: enterAr ? '#8AB4F8' : '#3C4043', color: enterAr ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Icons.AR color={enterAr ? '#202124' : 'white'} size={20} />
           </button>

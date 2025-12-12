@@ -13,6 +13,7 @@ import { Joystick } from "react-joystick-component";
 import { Leva, useControls } from 'leva';
 import axios from 'axios';
 import { DateTime } from "luxon";
+import { XR, createXRStore, XROrigin } from '@react-three/xr'; // Added XROrigin
 
 import { createPlantInstance, getAllPlantInstances } from '../services/plantService';
 import { geoToLocal } from '../geoUtils';
@@ -26,6 +27,8 @@ import Garden from './Garden';
 import RealtimeEnvironment from './RealtimeEnvironment';
 import ProceduralTerrain from './ProceduralTerrain';
 
+
+export const vrStore = createXRStore(); // Added store
 
 const Effects = () => {
   const { gl, scene, camera, size } = useThree();
@@ -234,7 +237,6 @@ export default function Scene({
   setIsPointerLocked,
   isMarketplaceOpen,
 }) {
-
   const canvasRef = useRef();
   const usersRef = useRef(users);
   const raycaster = new THREE.Raycaster();
@@ -452,13 +454,22 @@ export default function Scene({
     // Optional: Log or setup static config
   }, []);
 
+  // Subscribe to VR Session state to handle hybrid logic
+  const [isPresenting, setIsPresenting] = useState(false);
+  useEffect(() => {
+    const unsub = vrStore.subscribe((state) => {
+      setIsPresenting(!!state.session);
+    });
+    return unsub;
+  }, []);
+
   return (
     <>
       <Leva hidden />
       <Canvas
         frameloop={isMarketplaceOpen ? "never" : "always"}
         shadows="soft"
-        dpr={0.75} // Fixed Aggressive Quality
+        dpr={0.75}
         ref={canvasRef}
         gl={{
           antialias: true,
@@ -475,11 +486,14 @@ export default function Scene({
         style={{ height: '100%' }}
         onDoubleClick={handleCanvasClick}
       >
-
-        <Stats />
-        <BakeShadows />
-        <Preload all />
-        {/* <RealtimeEnvironment
+        <XR store={vrStore}> {/* Added XR wrapper */}
+          <XROrigin position={[position.x, -5.5, position.z]} /> {/* Fix VR Camera Height to Floor Level */}
+          <Stats />
+          <BakeShadows />
+          <Preload all />
+          {/* ... rest of the scene ... */}
+          {/* Minimal lighting for shadows */}
+          {/* <RealtimeEnvironment
           lat={lat}
           lng={lng}
           position={position}
@@ -490,260 +504,110 @@ export default function Scene({
           zoneName={zoneName} // <-- pass the timezone name as a prop
         /> */}
 
-        {/* Darker Environment */}
-        {/* <Environment environmentIntensity={0.05} backgroundIntensity={0.05} files={'/hdr/the_sky_is_on_fire_4k.exr'} /> */}
+          {/* Enabled Environment for Visibility */}
+          <Environment preset="forest" background blur={0.5} />
 
-        {/* Minimal lighting for shadows */}
-        <ambientLight intensity={0.1} />
-        <group>
-          <directionalLight
-            position={[-8, 15, 10]}
-            intensity={1}
-            rotation={[Math.PI / 2, 0, 0]}
-            color={'white'}
-            castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
-            shadow-camera-far={500}
-            shadow-camera-left={-500}
-            shadow-camera-right={500}
-            shadow-camera-top={500}
-            shadow-camera-bottom={-500}
-            shadow-bias={-0.0001}
-          />
-          <directionalLight
-            position={[-8, 15, 0]}
-            intensity={1}
-            rotation={[Math.PI / 2, 0, 0]}
-            color={'white'}
-            castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
-            shadow-camera-far={500}
-            shadow-camera-left={-500}
-            shadow-camera-right={500}
-            shadow-camera-top={500}
-            shadow-camera-bottom={-500}
-            shadow-bias={-0.0001}
-          />
-        </group>
-        <group>
-          <directionalLight
-            position={[8, 15, 10]}
-            intensity={1}
-            rotation={[Math.PI / 2, 0, 0]}
-            color={'white'}
-            castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
-            shadow-camera-far={500}
-            shadow-camera-left={-500}
-            shadow-camera-right={500}
-            shadow-camera-top={500}
-            shadow-camera-bottom={-500}
-            shadow-bias={-0.0001}
-          />
-          <directionalLight
-            position={[8, 15, 0]}
-            intensity={1}
-            rotation={[Math.PI / 2, 0, 0]}
-            color={'white'}
-            castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
-            shadow-camera-far={500}
-            shadow-camera-left={-500}
-            shadow-camera-right={500}
-            shadow-camera-top={500}
-            shadow-camera-bottom={-500}
-            shadow-bias={-0.0001}
-          />
-        </group>
-        <group>
-          <directionalLight
-            position={[12, 25, 10]}
-            intensity={1}
-            rotation={[0, 0, 0]}
-            color={'white'}
-            castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
-            shadow-camera-far={500}
-            shadow-camera-left={-500}
-            shadow-camera-right={500}
-            shadow-camera-top={500}
-            shadow-camera-bottom={-500}
-            shadow-bias={-0.0001}
-          />
-          <directionalLight
-            position={[12, 25, 0]}
-            intensity={1}
-            rotation={[0, 0, 0]}
-            castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
-            shadow-camera-far={500}
-            shadow-camera-left={-500}
-            shadow-camera-right={500}
-            shadow-camera-top={500}
-            shadow-camera-bottom={-500}
-            shadow-bias={-0.0001}
-          />
-        </group>
-        <group>
-          <directionalLight
-            position={[-25, 25, 10]}
-            intensity={1}
-            rotation={[0, 0, 0]}
-            color={'white'}
-            castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
-            shadow-camera-far={500}
-            shadow-camera-left={-500}
-            shadow-camera-right={500}
-            shadow-camera-top={500}
-            shadow-camera-bottom={-500}
-            shadow-bias={-0.0001}
-          />
-          <directionalLight
-            position={[-25, 25, 0]}
-            intensity={1}
-            rotation={[0, 0, 0]}
-            castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
-            shadow-camera-far={500}
-            shadow-camera-left={-500}
-            shadow-camera-right={500}
-            shadow-camera-top={500}
-            shadow-camera-bottom={-500}
-            shadow-bias={-0.0001}
-          />
-        </group>
-        <group>
-          <directionalLight
-            position={[-35, 25, 10]}
-            intensity={1}
-            rotation={[0, 0, 0]}
-            color={'white'}
-            castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
-            shadow-camera-far={500}
-            shadow-camera-left={-500}
-            shadow-camera-right={500}
-            shadow-camera-top={500}
-            shadow-camera-bottom={-500}
-            shadow-bias={-0.0001}
-          />
-          <directionalLight
-            position={[-35, 25, 0]}
-            intensity={1}
-            rotation={[0, 0, 0]}
-            castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
-            shadow-camera-far={500}
-            shadow-camera-left={-500}
-            shadow-camera-right={500}
-            shadow-camera-top={500}
-            shadow-camera-bottom={-500}
-            shadow-bias={-0.0001}
-          />
-        </group>
-
-        <DragHandler
-          draggedModel={draggedModel}
-          canvasRef={canvasRef}
-        />
+          {/* Better lighting */}
+          <ambientLight intensity={0.5} />
+         
+          {/* 
+          <DragHandler
+            draggedModel={draggedModel}
+            canvasRef={canvasRef}
+          /> */}
 
 
-        <Bvh firstHitOnly>
-          <Physics gravity={[0, -9.81, 0]}>
-            <FirstPersonController
-              ref={controllerRef}
-              startPosition={[position.x, position.y, position.z - 2]} // Start slightly higher to avoid floor clip
-              socket={socket}
-              userName={userName}
-              isMobile={isMobile}
-              isFirstPerson={isFirstPerson}
-              aimActiveRef={{ current: false }} // Stub
-              joystickDataRef={joystickDataRef}
-              isMenuOpen={false}
-            />
+          <Bvh firstHitOnly>
+            <Physics gravity={[0, -9.81, 0]}>
 
-            {usersRef.current.map((user) => {
-              // Don't render self as remote player if userId/name matches
-              if (user.userId === socket?.id || user.name === userName) return null;
-
-              return (
-                <RemotePlayer
-                  key={user.userId || user.name}
-                  player={user}
-                  playerId={user.userId || user.name}
+              {/* Only render FirstPersonController in Desktop Mode to prevent VR conflict */}
+              {!isPresenting && (
+                <FirstPersonController
+                  ref={controllerRef}
+                  startPosition={[position.x, position.y, position.z - 2]} // Start slightly higher to avoid floor clip
+                  socket={socket}
+                  userName={userName}
+                  isMobile={isMobile}
+                  isFirstPerson={isFirstPerson}
+                  aimActiveRef={{ current: false }} // Stub
+                  joystickDataRef={joystickDataRef}
+                  isMenuOpen={false}
                 />
-              );
-            })}
+              )}
 
-            <CuboidCollider args={[1000, 1, 1000]} position={[0, -3, 0]} /> {/* Invisible Floor */}
+              {usersRef.current.map((user) => {
+                // Don't render self as remote player if userId/name matches
+                if (user.userId === socket?.id || user.name === userName) return null;
 
-            {/* Visible ground plane for shadow receiving */}
-            <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.99, 0]}>
-              <planeGeometry args={[2000, 2000]} />
-              <meshStandardMaterial
-                color="#4a5f3a"
-                roughness={0.8}
-                metalness={0.1}
-              />
-            </mesh>
+                return (
+                  <RemotePlayer
+                    key={user.userId || user.name}
+                    player={user}
+                    playerId={user.userId || user.name}
+                  />
+                );
+              })}
 
-            {/* <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} /> */}
-            {heldItem && (
-              <HeldItem
-                item={heldItem}
-                waterCapacity={waterJugCapacity}
-              />
-            )}
-            {users.map((user) => {
-              if (user.name === userName) return null;
-              return (
-                <RemotePlayer
-                  key={user.id}
-                  player={user}
-                  playerId={user.id}
+              {/* Floor Collider: -5 for Desktop (User Pref), -1 (Surface 0) for VR */}
+              <CuboidCollider args={[1000, 1, 1000]} position={[0, -9.5, 0]} /> {/* Floor Collider surface at y=0 */}
+
+              {/* Visible ground plane for shadow receiving */}
+              <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -5, 0]}>
+                <planeGeometry args={[100, 100]} />
+                <meshStandardMaterial
+                  color="#4a5f3a"
+                  roughness={0.8}
+                  metalness={0.1}
                 />
-              );
-            })}
+              </mesh>
 
-            {/* <ProceduralTerrain
+              {/* <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} /> */}
+              {heldItem && (
+                <HeldItem
+                  item={heldItem}
+                  waterCapacity={waterJugCapacity}
+                />
+              )}
+              {users.map((user) => {
+                if (user.name === userName) return null;
+                return (
+                  <RemotePlayer
+                    key={user.id}
+                    player={user}
+                    playerId={user.id}
+                  />
+                );
+              })}
+
+              {/* <ProceduralTerrain
               bbox={memoizedBBox}
               position={memoizedInitPosition}
               envIntensity={backgroundIntensity}
             /> */}
-            <Garden scale={2} position={[0, 2, 0]} onSelect={setSelectedModel} />
+              <Garden scale={2} position={[0, -4.5, 0]} onSelect={setSelectedModel} />
 
-            {placedModels.map((model) => (
-              <DroppedModel
-                plantId={model.plantId}
-                instanceId={model.instanceId}
-                key={model.instanceId}
-                modelPath={model.modelPath}
-                position={model.position || [0, 0, 0]}
-                name={model.name}
-                description={model.description}
-                onPositionChange={(newPosition) => handleModelPositionChange(model.id, newPosition)}
-                setSelectedModel={setSelectedModel}
-                setSelectedModelDetails={setSelectedModelDetails}
-                heldItem={heldItem}
-                feedPlant={feedPlant}
-              />
-            ))}
-          </Physics>
-        </Bvh>
+              {placedModels.map((model) => (
+                <DroppedModel
+                  plantId={model.plantId}
+                  instanceId={model.instanceId}
+                  key={model.instanceId}
+                  modelPath={model.modelPath}
+                  position={model.position || [0, 0, 0]}
+                  name={model.name}
+                  description={model.description}
+                  onPositionChange={(newPosition) => handleModelPositionChange(model.id, newPosition)}
+                  setSelectedModel={setSelectedModel}
+                  setSelectedModelDetails={setSelectedModelDetails}
+                  heldItem={heldItem}
+                  feedPlant={feedPlant}
+                />
+              ))}
+            </Physics>
+          </Bvh>
 
-        {/* Manual Post-Processing */}
-        {/* <Effects /> */}
+          {/* Manual Post-Processing */}
+          {/* <Effects /> */}
+        </XR>
       </Canvas>
       {isMobile && (
         <div style={{

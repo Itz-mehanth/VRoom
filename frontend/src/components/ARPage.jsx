@@ -118,81 +118,6 @@ function OptimizedEnvironment({ envPreset, ambientIntensity, directionalIntensit
   );
 }
 
-// --- Interactive VR UI Panel Component ---
-function InteractiveVRPanel({ position, rotation, onButtonClick, title, children }) {
-  const meshRef = useRef();
-  const [hovered, setHovered] = useState(false);
-  const [clicked, setClicked] = useState(false);
-
-  return (
-    <group position={position} rotation={rotation}>
-      {/* Background panel */}
-      <mesh
-        ref={meshRef}
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
-        onPointerDown={() => setClicked(true)}
-        onPointerUp={() => setClicked(false)}
-        onClick={onButtonClick}
-      >
-        <planeGeometry args={[2, 1.5]} />
-        <meshStandardMaterial
-          color={clicked ? "#4CAF50" : hovered ? "#2196F3" : "#1a1a1a"}
-          transparent
-          opacity={0.8}
-        />
-      </mesh>
-
-      {/* 3D Text or HTML content */}
-      <Html
-        position={[0, 0, 0.01]}
-        transform
-        occlude
-        style={{
-          width: '400px',
-          height: '300px',
-          pointerEvents: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontSize: '18px',
-          textAlign: 'center',
-          padding: '20px',
-        }}
-      >
-        <h3 style={{ margin: '0 0 20px 0' }}>{title}</h3>
-        {children}
-      </Html>
-    </group>
-  );
-}
-
-function TeleportationPlane() {
-  const { player } = useXR(); // Gets the player/camera rig from the XR session
-
-  // This function is called when the user clicks on the plane
-  const handleTeleport = (event) => {
-    if (event.intersection) {
-      // Move the player to the intersection point, but keep their current height
-      player.position.set(
-        event.intersection.point.x,
-        player.position.y,
-        event.intersection.point.z
-      );
-    }
-  };
-
-  return (
-    <mesh onPointerDown={handleTeleport}>
-      <Plane args={[100, 100]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        {/* The plane is slightly transparent so it's not too intrusive */}
-        <meshStandardMaterial color="gray" transparent opacity={0.1} />
-      </Plane>
-    </mesh>
-  );
-}
 
 // --- Safe VRUI Wrapper Component ---
 function SafeVRUIWrapper(props) {
@@ -258,145 +183,6 @@ function VRCompatibleUI({ uiProps, position = [0, -0.5, -2], rotation = [0, 0, 0
   );
 }
 
-
-// --- Custom XR Button Components ---
-function CustomVRButton({ onSessionStart, onSessionEnd, children, xrStore }) {
-  const [status, setStatus] = useState('exited');
-
-  const handleEnterVR = async () => {
-    try {
-      await xrStore.enterVR();
-      setStatus('entered');
-      onSessionStart?.();
-    } catch (error) {
-      console.error('Failed to enter VR:', error);
-      setStatus('unsupported');
-    }
-  };
-
-  useEffect(() => {
-    const unsubscribe = xrStore.subscribe((state) => {
-      if (state.session) {
-        setStatus('entered');
-      } else {
-        setStatus('exited');
-        onSessionEnd?.();
-      }
-    });
-
-    return unsubscribe;
-  }, [onSessionStart, onSessionEnd, xrStore]);
-
-  return (
-    <button
-      onClick={handleEnterVR}
-      className={status === 'entered' ? 'primary' : 'secondary'}
-      style={{
-        padding: '10px 20px',
-        margin: '5px',
-        backgroundColor: status === 'entered' ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.9)',
-        color: status === 'entered' ? 'var(--color-secondary)' : 'var(--color-text-main)',
-        border: status === 'entered' ? 'none' : '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-full)',
-        cursor: 'pointer',
-        fontWeight: '600',
-        fontSize: '14px',
-        width: 'auto',
-        display: 'inline-flex',
-        boxShadow: 'var(--shadow-sm)',
-        transition: 'all 0.2s ease'
-      }}
-      disabled={status === 'unsupported'}
-    >
-      {children || (status === 'entered' ? 'Exit VR' : 'Enter VR')}
-    </button>
-  );
-}
-
-function CustomARButton({ onSessionStart, onSessionEnd, children, xrStore }) {
-  const [status, setStatus] = useState('exited');
-
-  const handleEnterAR = async () => {
-    try {
-      await xrStore.enterAR();
-      setStatus('entered');
-      onSessionStart?.();
-    } catch (error) {
-      console.error('Failed to enter AR:', error);
-      setStatus('unsupported');
-    }
-  };
-
-  useEffect(() => {
-    const unsubscribe = xrStore.subscribe((state) => {
-      if (state.session) {
-        setStatus('entered');
-      } else {
-        setStatus('exited');
-        onSessionEnd?.();
-      }
-    });
-
-    return unsubscribe;
-  }, [onSessionStart, onSessionEnd, xrStore]);
-
-  return (
-    <button
-      onClick={handleEnterAR}
-      className={status === 'entered' ? 'primary' : 'secondary'}
-      style={{
-        padding: '10px 20px',
-        margin: '5px',
-        backgroundColor: status === 'entered' ? 'var(--color-primary)' : 'rgba(255, 255, 255, 0.9)',
-        color: status === 'entered' ? 'var(--color-secondary)' : 'var(--color-text-main)',
-        border: status === 'entered' ? 'none' : '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-full)',
-        cursor: 'pointer',
-        fontWeight: '600',
-        fontSize: '14px',
-        width: 'auto',
-        display: 'inline-flex',
-        boxShadow: 'var(--shadow-sm)',
-        transition: 'all 0.2s ease'
-      }}
-      disabled={status === 'unsupported'}
-    >
-      {children || (status === 'entered' ? 'Exit AR' : 'Enter AR')}
-    </button>
-  );
-}
-
-// --- Helper WorldMap for the overlay ---
-function WorldMapOverlay({ coords, placedModels = [], userMarkerPosition = null }) {
-  const hasCoords = Array.isArray(coords) && coords.length === 2 && coords.every(Number.isFinite);
-  const center = hasCoords ? coords : [0, 0];
-  const zoom = hasCoords ? 20 : 2;
-
-  function EmojiMarker({ position, emoji }) {
-    return (
-      <Marker position={position} icon={L.divIcon({
-        className: '',
-        html: `<span style='font-size: 32px; line-height: 1;'>${emoji}</span>`
-      })} />
-    );
-  }
-
-  return (
-    <div style={{ width: '100%', height: '100%' }}>
-      <MapContainer center={center} zoom={zoom} style={{ height: "100%", width: "100%" }} zoomControl={false} attributionControl={false}>
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-        {userMarkerPosition && <EmojiMarker position={userMarkerPosition} emoji="🔵" />}
-        {placedModels.map((model, idx) => {
-          if (!model.position) return null;
-          const [x, , z] = model.position;
-          const [lat, lng] = localToGeo([x, z], center);
-          return <EmojiMarker key={model.instanceId || idx} position={[lat, lng]} emoji="🟢" />;
-        })}
-      </MapContainer>
-    </div>
-  );
-}
-
 // --- Main ARPage Component ---
 export default function ARPage({
   coords,
@@ -458,6 +244,21 @@ export default function ARPage({
     }
     loadPlants();
   }, [setPlacedModels]);
+
+  // Auto-enter AR when the component mounts if enterAr is true
+  useEffect(() => {
+    if (enterAr) {
+      const enterARSession = async () => {
+        try {
+          await store.enterAR();
+          setMode('ar');
+        } catch (e) {
+          console.error("Failed to auto-enter AR:", e);
+        }
+      };
+      enterARSession();
+    }
+  }, [enterAr]); // Dependency on enterAr to trigger only when it's true (which it is on mount)
 
   const handleExitVR = () => {
     const session = store.getState().session;
@@ -582,19 +383,11 @@ export default function ARPage({
         </button>
       </div>
 
-      {/* --- Updated XR Buttons --- */}
-      <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 100, display: 'flex', gap: '8px' }}>
-        <CustomVRButton
-          onSessionStart={() => setMode('vr')}
-          onSessionEnd={() => setMode(null)}
-          xrStore={store}
-        />
-        <CustomARButton
-          onSessionStart={() => setMode('ar')}
-          onSessionEnd={() => setMode(null)}
-          xrStore={store}
-        />
-      </div>
+      {/* --- Updated XR Buttons REMOVED per user request (Auto-enter enabled) --- */}
+      {/* <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 100, display: 'flex', gap: '8px' }}>
+        <CustomVRButton ... />
+        <CustomARButton ... />
+      </div> */}
 
       <VRUI
         {...uiProps} // Pass all props at once
@@ -618,14 +411,14 @@ export default function ARPage({
               />
 
               {/* --- 3D Scene Objects (always present) --- */}
-              <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} />
-              {heldItem && <HeldItem item={heldItem} waterCapacity={rest.waterJugCapacity} />}
+              {/* <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} /> */}
+              {/* {heldItem && <HeldItem item={heldItem} waterCapacity={rest.waterJugCapacity} />} */}
 
               {users.map((user) => (
                 user.name !== userName && <Avatar key={user.id} {...user} />
               ))}
 
-              {placedModels.map((model) => (
+              {/* {placedModels.map((model) => (
                 <DroppedModel
                   key={model.instanceId || model.id}
                   {...model}
@@ -635,9 +428,17 @@ export default function ARPage({
                   setSelectedModel={rest.setSelectedModel}
                   setSelectedModelDetails={rest.setSelectedModelDetails}
                 />
-              ))}
+              ))} */}
 
               {/* <Garden scale={0.5} p `osition={[0,-1,0]} /> */}
+
+              {/* --- AR Demo Placement (Fixed in front of camera) --- */}
+              {mode === 'ar' && (
+                <group position={[0, -0.5, -1]}>
+                  {/* Using PlantBot as a placeholder, or we could use a specific Plant model if available */}
+                  {/* <PlantBot position={[0, 0, 0]} scale={[0.5, 0.5, 0.5]} refillResourceFromAdvice={() => { }} /> */}
+                </group>
+              )}
 
               {/* --- Player Rig (for desktop movement logic) --- */}
               {mode !== 'vr' && <Rig {...{ userName, socket, position, setPosition, isWalking }} />}
