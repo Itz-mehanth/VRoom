@@ -28,7 +28,7 @@ const BackgroundCircle = () => (
     </Circle>
 );
 
-const PlantMarketplace = ({ onClose }) => {
+const PlantMarketplace = ({ onClose, onViewInAR }) => {
     const [selectedId, setSelectedId] = useState(1);
     const focusedPlant = PLANTS.find(p => p.id === selectedId) || PLANTS[0];
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -48,7 +48,7 @@ const PlantMarketplace = ({ onClose }) => {
             flexDirection: 'column',
             fontFamily: "'Inter', sans-serif",
             position: 'relative',
-            overflow: 'hidden',
+            overflowY: 'auto', // Allow vertical scrolling
             color: '#064e3b'
         }}>
             {/* Top Navigation - Simplified */}
@@ -88,7 +88,7 @@ const PlantMarketplace = ({ onClose }) => {
 
             {/* Main Content Area */}
             <div style={{
-                flex: 1,
+                flex: '1 0 auto', // Allow grow, prevent shrink
                 display: 'flex',
                 position: 'relative',
                 padding: isMobile ? '0 20px' : '0 60px',
@@ -138,8 +138,8 @@ const PlantMarketplace = ({ onClose }) => {
                         {focusedPlant.description}
                     </p>
 
-                    {/* Stats / Badges instead of Cart Buttons */}
-                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                    {/* Stats / Badges */}
+                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
                         <div style={{
                             padding: '12px 24px',
                             backgroundColor: '#d1fae5',
@@ -158,6 +158,29 @@ const PlantMarketplace = ({ onClose }) => {
                         }}>
                             Vitality: {focusedPlant.vitality}
                         </div>
+
+                        {/* View in AR Button */}
+                        <button
+                            onClick={() => onViewInAR(focusedPlant)}
+                            style={{
+                                padding: '12px 24px',
+                                background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                                borderRadius: '30px',
+                                color: 'white',
+                                fontWeight: '700',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                boxShadow: '0 4px 14px rgba(5, 150, 105, 0.4)',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                        >
+                            <span>📱</span> View in AR
+                        </button>
                     </div>
                 </div>
 
@@ -192,6 +215,7 @@ const PlantMarketplace = ({ onClose }) => {
             {/* Bottom Horizontal List */}
             <div style={{
                 height: isMobile ? '280px' : '220px',
+                flexShrink: 0, // Prevent shrinking
                 display: 'flex',
                 alignItems: 'center',
                 padding: isMobile ? '0 20px' : '0 60px',

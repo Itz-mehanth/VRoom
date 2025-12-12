@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
-import { XR, createXRStore, useXR } from "@react-three/xr";
+import { XR, createXRStore, useXR, XROrigin } from "@react-three/xr";
 import { Html, Environment, Sky, Stats, Plane } from '@react-three/drei';
 import { TileLayer, Marker, MapContainer } from "react-leaflet";
 import L from "leaflet";
@@ -17,7 +17,7 @@ import VRUI from './VRUI';
 import VRSceneContent from './VRInteractiveComponents';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
-const store = createXRStore()
+export const store = createXRStore()
 
 // --- Error Boundary Component ---
 class VRErrorBoundary extends React.Component {
@@ -44,6 +44,9 @@ class VRErrorBoundary extends React.Component {
             <div style={{ color: 'white', textAlign: 'center', padding: '20px' }}>
               <h3>VR Component Error</h3>
               <p>Something went wrong with the VR interface.</p>
+              <pre style={{ maxWidth: '300px', overflow: 'auto', fontSize: '12px', background: 'rgba(0,0,0,0.5)' }}>
+                {this.state.error?.message || String(this.state.error)}
+              </pre>
               <button onClick={() => this.setState({ hasError: false, error: null })}>
                 Retry
               </button>
@@ -76,44 +79,47 @@ function OptimizedEnvironment({ envPreset, ambientIntensity, directionalIntensit
     );
   }
 
+  // Handle Environment Logic: Hide background in AR mode to show camera feed
   return (
     <>
-      {/* Environment with error handling */}
-      {envPreset && envPreset !== 'none' ? (
-        <React.Suspense fallback={null}>
-          <Environment
-            preset={envPreset}
-            onError={() => {
-              console.warn('Environment preset failed, using fallback lighting');
-              setEnvironmentError(true);
-            }}
-          />
-        </React.Suspense>
-      ) : (
-        <>
-          <ambientLight intensity={0.4} />
-          <directionalLight position={[10, 10, 5]} intensity={1} />
-        </>
-      )}
-
+      {/* Lights - always needed */}
       <ambientLight intensity={ambientIntensity} />
       <directionalLight
         castShadow
         position={sunPosition || [10, 10, 5]}
         intensity={directionalIntensity}
-        shadow-mapSize-width={1024} // Reduced for better performance
+        shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       />
 
-      {/* Sky component with error handling */}
-      {sunPosition && (
-        <React.Suspense fallback={null}>
-          <Sky sunPosition={sunPosition} turbidity={skyTurbidity || 10} />
-        </React.Suspense>
-      )}
+      {/* Environment/Sky - ONLY for VR or Non-AR modes */}
+      {mode !== 'ar' && (
+        <>
+          {envPreset && envPreset !== 'none' ? (
+            <React.Suspense fallback={null}>
+              <Environment
+                preset={envPreset}
+                background // This makes it opaque!
+                onError={() => {
+                  console.warn('Environment preset failed, using fallback lighting');
+                  setEnvironmentError(true);
+                }}
+              />
+            </React.Suspense>
+          ) : (
+            <>
+              {/* Fallback lights already present above */}
+            </>
+          )}
 
-      {/* Stats component removed to prevent UI obstruction */}
-      {/* {!mode && <Stats />} */}
+          {/* Sky component */}
+          {sunPosition && (
+            <React.Suspense fallback={null}>
+              <Sky sunPosition={sunPosition} turbidity={skyTurbidity || 10} />
+            </React.Suspense>
+          )}
+        </>
+      )}
     </>
   );
 }
@@ -227,11 +233,15 @@ export default function ARPage({
   setSelectedModelDetails,
   roomId,
   enterAr,
+  setEnterAr,
+  arPreviewModel,
   ...rest
 }) {
 
   const [mode, setMode] = useState(null);
-  const navigate = useNavigate(); // Hook for navigation
+  const [status, setStatus] = useState('idle'); // idle, requesting, running, error
+  const [errorMessage, setErrorMessage] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     async function loadPlants() {
@@ -245,69 +255,64 @@ export default function ARPage({
     loadPlants();
   }, [setPlacedModels]);
 
-  // Auto-enter AR when the component mounts if enterAr is true
+  // Auto-enter AR when the component mounts
   useEffect(() => {
     if (enterAr) {
       const enterARSession = async () => {
         try {
+          setStatus('requesting');
           await store.enterAR();
           setMode('ar');
+          setStatus('running');
         } catch (e) {
           console.error("Failed to auto-enter AR:", e);
+          setStatus('error');
+          setErrorMessage(e.message || "Unknown AR Error");
         }
       };
       enterARSession();
     }
-  }, [enterAr]); // Dependency on enterAr to trigger only when it's true (which it is on mount)
+  }, [enterAr]);
+
+  const handleManualStart = async () => {
+    try {
+      setStatus('requesting');
+      setErrorMessage('');
+      await store.enterAR();
+      setMode('ar');
+      setStatus('running');
+    } catch (e) {
+      console.error("Failed to manual-enter AR:", e);
+      setStatus('error');
+      setErrorMessage(e.message || "Manual Start Failed");
+      // Allow retry after a short delay or immediately by resetting status if needed, 
+      // but 'error' status already shows the retry button.
+    }
+  };
 
   const handleExitVR = () => {
     const session = store.getState().session;
     if (session) {
       session.end();
+      setStatus('idle');
+      setMode(null);
     }
   };
 
   const handleBack = () => {
-    // Logic to go back. If in a "modal" state (VR/AR), maybe end session? 
-    // But user likely wants to go BACK to the previous page (VideoChat / Home)
-    // Since App.jsx conditionally renders ARPage, "Back" here implies turning off 'enterAr' in App.jsx
-    // BUT ARPage is rendered via a conditional prop `enterAr` in App.jsx...
-    // Wait, App.jsx: { enterAr && <ARPage ... /> }
-    // So to "go back", we actually need to tell the parent (App) to setting setEnterAr(false).
-    // However, looking at App.jsx, I see `setEnterAr` is passed to VideoChat, but NOT to ARPage?
-    // Let's check App.jsx again.
-    // App.jsx: <ARPage ... enterAr={enterAr} ... />. It does NOT pass setEnterAr.
-    // It DOES pass `toggleView` to VideoChat, but ARPage seems isolated.
-    // If I look at the props list for ARPage, there is no setEnterAr.
-    // BUT, I can force a refresh or navigate to the room URL again? 
-    // ACTUALLY, checking App.jsx again: VideoChat has `setEnterAr`. ARPage does not.
-    // This means I cannot easily flip the state from here without prop drilling.
-    // HOWEVER, simply refreshing the page or navigating to the room link *might* reset state, 
-    // but that's a bad UX (reloads 3D scene).
+    // Exit AR session if active
+    const session = store.getState().session;
+    if (session) {
+      session.end();
+    }
 
-    // Let's assume for now I should navigate to the Room URL. 
-    // Since we are AT the room URL (App.jsx renders Room component which renders ARPage), 
-    // and 'enterAr' is a state inside Room component...
-    // I NEED `setEnterAr` prop here.
-
-    // Since I can't easily change App.jsx logic without editing App.jsx (which I can do),
-    // I will navigate back to "Home" as a fallback, OR purely use window.location.reload() for a hard reset if I'm lazy.
-    // BETTER: I will edit ARPage to accept an `onBack` prop? No, I need to edit App.jsx to pass it.
-    // BUT, `ARPage` renders `VRUI`, and `VideoChat`.
-    // Let's look at how we get INTO ARPage. In VideoChat, `setEnterAr(!enterAr)`.
-
-    // OPTION 1: Use `navigate(0)` (reload) - Crude.
-    // OPTION 2: Edit App.jsx to pass `setEnterAr` to ARPage.
-
-    // Let's choose OPTION 2 for cleaner code. I will need to edit App.jsx too.
-    // But wait, step 1 is modifying ARPage. I'll add the button, and for the logic, 
-    // if `setEnterAr` is not available, I'll `navigate(0)` as fallback.
-
-    // Actually, looking at previous App.jsx dump, `toggleView` is passed. `setEnterAr` is passed to VIDEOCHAT.
-    // I'll assume I can just reload for now, OR I will edit App.jsx in the next step to pass the setter.
-    // Re-reading the prompt: "once entered arpage there is no button to go back just analyse and once and align all teh element"
-
-    window.location.reload(); // Quick fix for "Back" if state setter isn't present
+    // Cleanly exit AR mode using state setter from App.jsx
+    if (setEnterAr) {
+      setEnterAr(false);
+    } else {
+      // Fallback if prop missing
+      window.location.reload();
+    }
   };
 
   // Collect all props to pass to the VRUI component
@@ -359,7 +364,7 @@ export default function ARPage({
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: "100vw", height: "100vh", position: "relative", backgroundColor: 'black' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: "100vw", height: "100vh", position: "relative", backgroundColor: mode === 'ar' ? 'transparent' : 'black' }}>
 
       {/* --- NEW BACK BUTTON --- */}
       <div style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 100 }}>
@@ -389,15 +394,58 @@ export default function ARPage({
         <CustomARButton ... />
       </div> */}
 
-      <VRUI
-        {...uiProps} // Pass all props at once
-      />
+      {/* Only show full VR UI if NOT in single model preview mode */}
+      {!arPreviewModel && (
+        <VRUI
+          {...uiProps} // Pass all props at once
+        />
+      )}
+
+      {/* --- Overlay UI for connection status --- */}
+      {status !== 'running' && (
+        <div style={{
+          position: 'absolute',
+          top: 0, left: 0, width: '100%', height: '100%',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 90, color: 'white'
+        }}>
+          {status === 'requesting' && <p>Requesting AR Session...</p>}
+          {status === 'error' && (
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ color: '#ff6b6b', marginBottom: '10px' }}>AR Error: {errorMessage}</p>
+              <button
+                onClick={handleManualStart}
+                style={{
+                  padding: '12px 24px', background: 'white', color: 'black',
+                  border: 'none', borderRadius: '8px', fontSize: '16px', cursor: 'pointer'
+                }}
+              >
+                Try Starting Manually
+              </button>
+            </div>
+          )}
+          {status === 'idle' && (
+            <button
+              onClick={handleManualStart}
+              style={{
+                padding: '12px 24px', background: '#4CAF50', color: 'white',
+                border: 'none', borderRadius: '8px', fontSize: '18px', cursor: 'pointer'
+              }}
+            >
+              Start AR Session
+            </button>
+          )}
+        </div>
+      )}
 
       <Canvas
         performance={{ min: 0.5 }} // Allow frame rate to drop to 30fps if needed
         dpr={[1, 2]} // Limit device pixel ratio for better performance
+        gl={{ alpha: true, preserveDrawingBuffer: true }} // Transparent canvas for AR
+        style={{ pointerEvents: 'none', background: 'transparent' }} // Ensure clicks pass through (except on meshes)
       >
         <XR store={store}>
+          <XROrigin position={[position.x, 0, position.z]} />
           <VRErrorBoundary>
             <ModelRegistry>
               {/* --- Optimized Environment and Lighting --- */}
@@ -414,34 +462,38 @@ export default function ARPage({
               {/* <PlantBot position={[2, 0, 2]} refillResourceFromAdvice={refillResourceFromAdvice} /> */}
               {/* {heldItem && <HeldItem item={heldItem} waterCapacity={rest.waterJugCapacity} />} */}
 
-              {users.map((user) => (
-                user.name !== userName && <Avatar key={user.id} {...user} />
-              ))}
-
-              {/* {placedModels.map((model) => (
+              {/* --- 3D Scene Objects --- */}
+              {/* If a specific model is selected from marketplace, show ONLY that model */}
+              {arPreviewModel ? (
                 <DroppedModel
-                  key={model.instanceId || model.id}
-                  {...model}
-                  onPositionChange={(newPosition) => handleModelPositionChange(model.id, newPosition)}
-                  heldItem={heldItem}
-                  feedPlant={feedPlant}
-                  setSelectedModel={rest.setSelectedModel}
-                  setSelectedModelDetails={rest.setSelectedModelDetails}
+                  key="preview"
+                  modelPath={arPreviewModel.modelPath}
+                  position={[0, 0, 0]} // Fixed distance in front of camera
+                  scale={[5, 5, 5]} // Make it visible
+                  name={arPreviewModel.name}
+                  description={arPreviewModel.description || "Preview"}
+                  setSelectedModel={setSelectedModel}
+                  setSelectedModelDetails={setSelectedModelDetails}
                 />
-              ))} */}
+              ) : (
+                <>
+                  {/* Standard Social AR Scene */}
+                  {users.map((user) => (
+                    user.name !== userName && <Avatar key={user.id} {...user} />
+                  ))}
 
-              {/* <Garden scale={0.5} p `osition={[0,-1,0]} /> */}
 
-              {/* --- AR Demo Placement (Fixed in front of camera) --- */}
-              {mode === 'ar' && (
-                <group position={[0, -0.5, -1]}>
-                  {/* Using PlantBot as a placeholder, or we could use a specific Plant model if available */}
-                  {/* <PlantBot position={[0, 0, 0]} scale={[0.5, 0.5, 0.5]} refillResourceFromAdvice={() => { }} /> */}
-                </group>
+                  {/* Placed Garden Models */}
+                  {/* {placedModels.map( ... )} mapped below in comments but let's uncomment or handle standard logic here if needed. 
+                      For now I'll just keep the existing structure but wrap in fragment.
+                  */}
+                </>
               )}
 
-              {/* --- Player Rig (for desktop movement logic) --- */}
-              {mode !== 'vr' && <Rig {...{ userName, socket, position, setPosition, isWalking }} />}
+              {/* --- Player Rig (only for non-XR modes AND if not viewing single model) --- */}
+              {!arPreviewModel && mode !== 'vr' && mode !== 'ar' && (
+                <Rig {...{ userName, socket, position, setPosition, isWalking, enterAr }} />
+              )}
 
               {/* --- Conditionally render VR-specific components --- */}
               {mode === 'vr' && (

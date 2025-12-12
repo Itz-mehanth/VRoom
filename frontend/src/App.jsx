@@ -10,6 +10,7 @@ import { localToGeo, geoToLocal } from './geoUtils';
 import Profile from './components/Profile';
 import PlantDetailsHUD from './components/PlantDetailsHUD';
 import PlantMarketplace from './components/PlantMarketplace';
+import { store as arStore } from './components/ARPage';
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -43,6 +44,7 @@ const Room = () => {
   const [isAssetListOpen, setIsAssetListOpen] = useState(false);
   const [isWalking, setIsWalking] = useState(false);
   const [isPointerLocked, setIsPointerLocked] = useState(false);
+  const [arPreviewModel, setArPreviewModel] = useState(null); // Separate state for AR Preview
   const inventory = {};
 
   const [timeOfDay, setTimeOfDay] = useState(getTimeOfDayPhase());
@@ -80,6 +82,15 @@ const Room = () => {
       }
     }
   }, [coords]);
+
+  useEffect(() => {
+    setEnterAr(false);
+    setArPreviewModel(null);
+  }, [roomId]);
+
+  useEffect(() => {
+    console.log("[App] enterAr changed to:", enterAr);
+  }, [enterAr]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -219,7 +230,40 @@ const Room = () => {
       {/* Marketplace Overlay */}
       {isMarketplaceOpen && (
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 5000 }}>
-          <PlantMarketplace onClose={() => setIsMarketplaceOpen(false)} />
+          <PlantMarketplace
+            onClose={() => setIsMarketplaceOpen(false)}
+            onViewInAR={async (plant) => {
+              // Check mobile first
+              const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+              if (!isMobile) {
+                alert("AR feature not available on Desktop. Please try on mobile.");
+                return;
+              }
+
+              // Set the selected model for AR Preview
+              setArPreviewModel({
+                ...plant,
+                modelPath: plant.image
+              });
+
+              // Close marketplace
+              setIsMarketplaceOpen(false);
+
+              // Attempt to enter AR using the exported store (User Gesture captured here)
+              try {
+                await arStore.enterAR();
+                setEnterAr(true);
+              } catch (e) {
+                console.error("Failed to start AR session:", e);
+                alert("Could not start AR session. Please check browser permissions.");
+                // Still open Page? No, fallback.
+                // We can open page anyway to show Manual button if it failed?
+                // But user didn't want manual button.
+                // Let's open page as fallback.
+                setEnterAr(true);
+              }
+            }}
+          />
         </div>
       )}
 
@@ -291,12 +335,15 @@ const Room = () => {
         <ARPage
           coords={coords}
           enterAr={enterAr}
+          setEnterAr={setEnterAr}
+          arPreviewModel={arPreviewModel}
           users={users}
           socket={socket}
           placedModels={placedModels}
           isWalking={isWalking}
           setIsWalking={setIsWalking}
           setPlacedModels={setPlacedModels}
+          selectedModel={selectedModel}
           heldItem={heldItem}
           setHeldItem={setHeldItem}
           ambientIntensity={ambientIntensity}
@@ -304,7 +351,6 @@ const Room = () => {
           skyTurbidity={skyTurbidity}
           sunPosition={sunPosition}
           userName={currentUser.displayName}
-          selectedModel={selectedModel}
           setSelectedModel={setSelectedModel}
           selectedModelDetails={selectedModelDetails}
           setSelectedModelDetails={setSelectedModelDetails}
@@ -336,8 +382,14 @@ const Room = () => {
 
 
       <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
         zIndex: 1,
-        pointerEvents: 'none'
+        pointerEvents: 'none',
+        visibility: enterAr ? 'hidden' : 'visible' // Hide VideoChat overlay in AR mode
       }}>
         <VideoChat
           roomId={roomId}

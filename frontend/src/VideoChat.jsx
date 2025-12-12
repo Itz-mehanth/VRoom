@@ -7,7 +7,7 @@ import { vrStore } from './components/Scene';
 /* --- Components --- */
 
 import {
-  Mic, MicOff, Video, VideoOff, ScreenShare, Box, PhoneOff, Send, ArrowLeft, MessageSquare, X, LayoutGrid, Glasses, Maximize, Search
+  Mic, MicOff, Video, VideoOff, ScreenShare, Box, PhoneOff, Send, ArrowLeft, MessageSquare, X, LayoutGrid, Glasses, Maximize, Search, Users
 } from 'lucide-react';
 
 /* --- Components --- */
@@ -27,7 +27,8 @@ const Icons = {
   Grid: LayoutGrid,
   Vr: Glasses,
   Fullscreen: Maximize,
-  Search
+  Search,
+  Users
 };
 
 const ChatMessage = ({ message, currentUserId }) => {
@@ -592,13 +593,8 @@ const VideoChat = ({
             <Icons.Vr color="white" size={20} />
           </button>
 
-          {/* Enter AR */}
-          <button onClick={() => setEnterAr(!enterAr)} title="Enter AR Mode" style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: enterAr ? '#8AB4F8' : '#3C4043', color: enterAr ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icons.AR color={enterAr ? '#202124' : 'white'} size={20} />
-          </button>
-
           <button onClick={() => setShowSidebar(!showSidebar)} style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: showSidebar ? '#8AB4F8' : '#3C4043', color: showSidebar ? '#202124' : 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icons.Chat color={showSidebar ? '#013ef7ff' : 'white'} size={20} />
+            <Icons.Users color={showSidebar ? '#202124' : 'white'} size={20} />
           </button>
 
           <button onClick={() => { if (!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }} style={{ width: 44, height: 44, borderRadius: '12px', border: 'none', background: '#3C4043', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

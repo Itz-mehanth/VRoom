@@ -10,8 +10,8 @@ const arePropsEqual = (prevProps, nextProps) => {
     prevProps.userName === nextProps.userName &&
     prevProps.isWalking === nextProps.isWalking &&
     (prevProps.position?.x === nextProps.position?.x &&
-     prevProps.position?.y === nextProps.position?.y &&
-     prevProps.position?.z === nextProps.position?.z) &&
+      prevProps.position?.y === nextProps.position?.y &&
+      prevProps.position?.z === nextProps.position?.z) &&
     (prevProps.rotation?.y === nextProps.rotation?.y)
   );
 };
@@ -103,7 +103,7 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
     if (position) {
       const targetPos = new THREE.Vector3(position.x, position.y - 1, position.z)
       const currentPos = currentPosition.current
-      
+
       // Calculate direction and distance to target
       const direction = new THREE.Vector3()
       direction.subVectors(targetPos, currentPos)
@@ -114,7 +114,7 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
         direction.normalize()
         const speed = 2.5 // Units per second
         const movement = direction.multiplyScalar(Math.min(speed * delta, distanceToTarget))
-        
+
         currentPos.add(movement)
         group.current.position.copy(currentPos)
       }
@@ -123,10 +123,10 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
     // Smooth rotation interpolation
     if (rotation) {
       const targetRotation = rotation.y - Math.PI
-      
+
       // Calculate the shortest angle difference
       let rotationDiff = (((targetRotation - currentRotation.current + Math.PI) % (Math.PI * 2)) - Math.PI)
-      
+
       // Use constant angular speed
       const rotationSpeed = 3 // Radians per second
       if (Math.abs(rotationDiff) > 0.01) {
@@ -136,7 +136,13 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
       }
     }
   })
-  
+
+  // Safety check for required nodes
+  if (!nodes?.Wolf3D_Head || !nodes?.Wolf3D_Body) {
+    console.warn("Avatar GLB nodes missing or incomplete");
+    return null;
+  }
+
   return (
     <group ref={group}>
       <Billboard
@@ -159,24 +165,28 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
           <meshStandardMaterial color="white" />
         </mesh>
       </Billboard>
-      <group rotation={[Math.PI/2, Math.PI, 0]} position={[0, 0, 0]} scale={[0.3, 0.3, 0.3]}>
+      <group rotation={[Math.PI / 2, Math.PI, 0]} position={[0, 0, 0]} scale={[0.3, 0.3, 0.3]}>
         <primitive object={nodes.Hips} />
-        <skinnedMesh
-          name="EyeLeft"
-          geometry={nodes.EyeLeft.geometry}
-          material={materials.Wolf3D_Eye}
-          skeleton={nodes.EyeLeft.skeleton}
-          morphTargetDictionary={nodes.EyeLeft.morphTargetDictionary}
-          morphTargetInfluences={nodes.EyeLeft.morphTargetInfluences}
-        />
-        <skinnedMesh
-          name="EyeRight"
-          geometry={nodes.EyeRight.geometry}
-          material={materials.Wolf3D_Eye}
-          skeleton={nodes.EyeRight.skeleton}
-          morphTargetDictionary={nodes.EyeRight.morphTargetDictionary}
-          morphTargetInfluences={nodes.EyeRight.morphTargetInfluences}
-        />
+        {nodes.EyeLeft && (
+          <skinnedMesh
+            name="EyeLeft"
+            geometry={nodes.EyeLeft.geometry}
+            material={materials.Wolf3D_Eye}
+            skeleton={nodes.EyeLeft.skeleton}
+            morphTargetDictionary={nodes.EyeLeft.morphTargetDictionary}
+            morphTargetInfluences={nodes.EyeLeft.morphTargetInfluences}
+          />
+        )}
+        {nodes.EyeRight && (
+          <skinnedMesh
+            name="EyeRight"
+            geometry={nodes.EyeRight.geometry}
+            material={materials.Wolf3D_Eye}
+            skeleton={nodes.EyeRight.skeleton}
+            morphTargetDictionary={nodes.EyeRight.morphTargetDictionary}
+            morphTargetInfluences={nodes.EyeRight.morphTargetInfluences}
+          />
+        )}
         <skinnedMesh
           name="Wolf3D_Head"
           geometry={nodes.Wolf3D_Head.geometry}
@@ -185,39 +195,49 @@ const Avatar = ({ position, userName, rotation, isWalking }) => {
           morphTargetDictionary={nodes.Wolf3D_Head.morphTargetDictionary}
           morphTargetInfluences={nodes.Wolf3D_Head.morphTargetInfluences}
         />
-        <skinnedMesh
-          name="Wolf3D_Teeth"
-          geometry={nodes.Wolf3D_Teeth.geometry}
-          material={materials.Wolf3D_Teeth}
-          skeleton={nodes.Wolf3D_Teeth.skeleton}
-          morphTargetDictionary={nodes.Wolf3D_Teeth.morphTargetDictionary}
-          morphTargetInfluences={nodes.Wolf3D_Teeth.morphTargetInfluences}
-        />
-        <skinnedMesh
-          geometry={nodes.Wolf3D_Hair.geometry}
-          material={materials.Wolf3D_Hair}
-          skeleton={nodes.Wolf3D_Hair.skeleton}
-        />
+        {nodes.Wolf3D_Teeth && (
+          <skinnedMesh
+            name="Wolf3D_Teeth"
+            geometry={nodes.Wolf3D_Teeth.geometry}
+            material={materials.Wolf3D_Teeth}
+            skeleton={nodes.Wolf3D_Teeth.skeleton}
+            morphTargetDictionary={nodes.Wolf3D_Teeth.morphTargetDictionary}
+            morphTargetInfluences={nodes.Wolf3D_Teeth.morphTargetInfluences}
+          />
+        )}
+        {nodes.Wolf3D_Hair && (
+          <skinnedMesh
+            geometry={nodes.Wolf3D_Hair.geometry}
+            material={materials.Wolf3D_Hair}
+            skeleton={nodes.Wolf3D_Hair.skeleton}
+          />
+        )}
         <skinnedMesh
           geometry={nodes.Wolf3D_Body.geometry}
           material={materials.Wolf3D_Body}
           skeleton={nodes.Wolf3D_Body.skeleton}
         />
-        <skinnedMesh
-          geometry={nodes.Wolf3D_Outfit_Bottom.geometry}
-          material={materials.Wolf3D_Outfit_Bottom}
-          skeleton={nodes.Wolf3D_Outfit_Bottom.skeleton}
-        />
-        <skinnedMesh
-          geometry={nodes.Wolf3D_Outfit_Footwear.geometry}
-          material={materials.Wolf3D_Outfit_Footwear}
-          skeleton={nodes.Wolf3D_Outfit_Footwear.skeleton}
-        />
-        <skinnedMesh
-          geometry={nodes.Wolf3D_Outfit_Top.geometry}
-          material={materials.Wolf3D_Outfit_Top}
-          skeleton={nodes.Wolf3D_Outfit_Top.skeleton}
-        />
+        {nodes.Wolf3D_Outfit_Bottom && (
+          <skinnedMesh
+            geometry={nodes.Wolf3D_Outfit_Bottom.geometry}
+            material={materials.Wolf3D_Outfit_Bottom}
+            skeleton={nodes.Wolf3D_Outfit_Bottom.skeleton}
+          />
+        )}
+        {nodes.Wolf3D_Outfit_Footwear && (
+          <skinnedMesh
+            geometry={nodes.Wolf3D_Outfit_Footwear.geometry}
+            material={materials.Wolf3D_Outfit_Footwear}
+            skeleton={nodes.Wolf3D_Outfit_Footwear.skeleton}
+          />
+        )}
+        {nodes.Wolf3D_Outfit_Top && (
+          <skinnedMesh
+            geometry={nodes.Wolf3D_Outfit_Top.geometry}
+            material={materials.Wolf3D_Outfit_Top}
+            skeleton={nodes.Wolf3D_Outfit_Top.skeleton}
+          />
+        )}
       </group>
     </group>
   )

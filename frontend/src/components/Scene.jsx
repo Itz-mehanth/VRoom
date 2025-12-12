@@ -487,7 +487,7 @@ export default function Scene({
         onDoubleClick={handleCanvasClick}
       >
         <XR store={vrStore}> {/* Added XR wrapper */}
-          <XROrigin position={[position.x, -5.5, position.z]} /> {/* Fix VR Camera Height to Floor Level */}
+          {isPresenting && <XROrigin position={[position.x, -5.5, position.z]} />} {/* Fix VR Camera Height to Floor Level, only in VR */}
           <Stats />
           <BakeShadows />
           <Preload all />
@@ -508,8 +508,8 @@ export default function Scene({
           <Environment preset="forest" background blur={0.5} />
 
           {/* Better lighting */}
-          <ambientLight intensity={0.5} />
-         
+          <ambientLight intensity={1} />
+
           {/* 
           <DragHandler
             draggedModel={draggedModel}
@@ -524,7 +524,7 @@ export default function Scene({
               {!isPresenting && (
                 <FirstPersonController
                   ref={controllerRef}
-                  startPosition={[position.x, position.y, position.z - 2]} // Start slightly higher to avoid floor clip
+                  startPosition={[position.x, 5, position.z - 2]} // Start higher (5m) to ensure fall to floor (-5m)
                   socket={socket}
                   userName={userName}
                   isMobile={isMobile}
